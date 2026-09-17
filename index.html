@@ -3,12 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Life — OpenAI vs Cloude</title>
+<title>AI Life — OpenAI & Cloude</title>
 <link rel="stylesheet" href="./css/style.css">
-<style>
-.live{color:#ff3030;text-shadow:0 0 8px #ff3030,0 0 16px #ff303066;animation:livePulse 1s ease-in-out infinite}
-@keyframes livePulse{0%,100%{opacity:1;text-shadow:0 0 7px #ff3030,0 0 14px #ff303055}50%{opacity:.62;text-shadow:0 0 2px #ff3030,0 0 8px #ff303044}}
-</style>
 </head>
 <body>
 <div id="game"></div>
@@ -46,17 +42,5 @@
   </div>
 </div>
 <script type="module" src="./js/main.js"></script>
-<script>
-  // UI names only: internal alpha/beta identifiers stay unchanged for simulation persistence.
-  const renameUI=()=>{
-    document.querySelectorAll('.name,.agent-name').forEach(el=>{
-      el.textContent=el.textContent.replace(/Альфа/g,'OpenAI').replace(/Бета/g,'Cloude');
-    });
-    const events=document.querySelector('#events');
-    if(events) events.innerHTML=events.innerHTML.replace(/Альфа/g,'OpenAI').replace(/Бета/g,'Cloude');
-  };
-  new MutationObserver(renameUI).observe(document.body,{subtree:true,childList:true,characterData:true});
-  renameUI();
-</script>
 </body>
 </html>
