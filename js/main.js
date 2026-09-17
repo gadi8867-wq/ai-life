@@ -55,7 +55,42 @@ class AgentBrain{constructor(agent){this.agent=agent;this.lastThought='набл�
 agents.forEach(a=>a.brain=new AgentBrain(a));
 function daylightFactor(v){return clamp((v+.2)/1.2)}
 function isWalkable(x,z){if(Math.abs(x)>55||Math.abs(z)>55)return false;const riverX=5-z*.045;return Math.abs(x-riverX)>7.2}
-function chooseLandTarget(a,action){for(let i=0;i<24;i++){let x=rand(-50,50),z=rand(-50,50);if(action==='water'){x=rand(-2,9);z=rand(-48,48)}if(isWalkable(x,z)){a.target.set(x,0,z);return}}a.target.copy(a.root.position)}
+function chooseLandTarget(a,action){
+  const candidates=[];
+  for(let i=0;i<80;i++){
+    let x=rand(-50,50),z=rand(-50,50);
+    if(action==='water'){x=rand(-2,9);z=rand(-48,48)}
+    if(!isWalkable(x,z))continue;
+    const fromCurrent=Math.hypot(x-a.root.position.x,z-a.root.position.z);
+    if(fromCurrent<8)continue;
+    const recent=a.recentTargets.some(t=>Math.hypot(x-t.x,z-t.z)<10);
+    if(recent)continue;
+    const other=agents.find(o=>o!==a);
+    const separation=other?Math.hypot(x-other.root.position.x,z-other.root.position.z):999;
+    const gridX=Math.round(x/5),gridZ=Math.round(z/5);
+    const lastRoute=a.routeHistory[a.routeHistory.length-1];
+    const routeRepeat=lastRoute&&lastRoute.length>=3&&lastRoute.slice(-3).some(p=>p.x===gridX&&p.z===gridZ);
+    const score=fromCurrent*.7+Math.random()*30+separation*.04-(routeRepeat?55:0);
+    candidates.push({x,z,score,gridX,gridZ});
+  }
+  candidates.sort((u,v)=>v.score-u.score);
+  const pick=candidates[0];
+  if(!pick){a.target.copy(a.root.position);return}
+  a.target.set(pick.x,0,pick.z);
+  a.recentTargets.unshift({x:pick.x,z:pick.z});
+  if(a.recentTargets.length>8)a.recentTargets.pop();
+  const route=a.routeHistory[a.routeHistory.length-1]||[];
+  route.push({x:pick.gridX,z:pick.gridZ});
+  if(route.length>6)route.shift();
+  const signature=route.map(p=>p.x+':'+p.z).join('|');
+  if(signature===a.lastRouteSignature&&route.length>=3){
+    const alternatives=candidates.slice(1).filter(p=>!route.slice(-3).some(r=>r.x===p.gridX&&r.z===p.gridZ));
+    const alt=alternatives[0];
+    if(alt){a.target.set(alt.x,0,alt.z);route[route.length-1]={x:alt.gridX,z:alt.gridZ}}
+  }
+  a.lastRouteSignature=route.map(p=>p.x+':'+p.z).join('|');
+  if(route.length===6){a.routeHistory.push(route.slice());if(a.routeHistory.length>4)a.routeHistory.shift()}
+}
 
 /* ---------- Real solar time ----------
  * Fixed experiment location: Nuremberg, Germany.
