@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Life — Alpha vs Beta</title>
+<title>AI Life — OpenAI vs Cloude</title>
 <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <div class="panel top">
   <div class="toprow">
     <h1>🌍 AI LIFE <span class="live">● LIVE</span></h1>
-    <span class="models">АЛЬФА · OpenAI &nbsp; БЕТА · Claude</span>
+    <span class="models">OpenAI &nbsp;·&nbsp; Cloude</span>
     <span class="badge" id="day">ЭКСПЕРИМЕНТ НЕ НАЧАТ</span>
     <span class="clock" id="clock">--:--:--</span>
   </div>
@@ -26,8 +26,8 @@
 <div class="radial" id="controlMenu">
   <button class="start" id="start" title="Запустить">▶️</button>
   <button id="pause" title="Пауза">⏸</button>
-  <button id="followA" title="Следить за Альфой">👤</button>
-  <button id="followB" title="Следить за Бетой">👥</button>
+  <button id="followA" title="Следить за OpenAI">👤</button>
+  <button id="followB" title="Следить за Cloude">👥</button>
   <button id="free" title="Свободная камера">🎥</button>
   <button id="auto" title="Автокамера">🎬</button>
 </div>
@@ -42,5 +42,17 @@
   </div>
 </div>
 <script type="module" src="./js/main.js"></script>
+<script>
+  // UI names only: internal alpha/beta identifiers stay unchanged for simulation persistence.
+  const renameUI=()=>{
+    document.querySelectorAll('.name,.agent-name').forEach(el=>{
+      el.textContent=el.textContent.replace(/Альфа/g,'OpenAI').replace(/Бета/g,'Cloude');
+    });
+    const events=document.querySelector('#events');
+    if(events) events.innerHTML=events.innerHTML.replace(/Альфа/g,'OpenAI').replace(/Бета/g,'Cloude');
+  };
+  new MutationObserver(renameUI).observe(document.body,{subtree:true,childList:true,characterData:true});
+  renameUI();
+</script>
 </body>
 </html>
