@@ -50,6 +50,7 @@ test('agents stay on land and wandering changes coordinates', async ({ page }) =
   expect(result.walkable).toEqual([true, true]);
   expect(result.after[0]).not.toEqual(result.before[0]);
   expect(result.after[1]).not.toEqual(result.before[1]);
+  await expect(page.locator('.agent-label').filter({ hasText: 'бродит' })).toHaveCount(2);
 });
 
 test('invalid saved positions migrate to the nearest safe land point', async ({ page }) => {
@@ -70,5 +71,5 @@ test('invalid saved positions migrate to the nearest safe land point', async ({ 
   });
   expect(result.every(a => a.walkable)).toBeTruthy();
   expect(Math.hypot(result[0].x - 5, result[0].z - 0)).toBeLessThan(20);
-  expect(Math.hypot(result[1].x - 5, result[1].z - 20)).toBeLessThan(20);
+  expect(Math.hypot(result[1].x - 5, result[1].z - 20)).toBeLessThan(15);
 });
