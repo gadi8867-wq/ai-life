@@ -30,7 +30,11 @@ jobs:
           curl -fsSL --retry 3 --retry-delay 2 \
             -o js/vendor/three.module.js \
             https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js
+          curl -fsSL --retry 3 --retry-delay 2 \
+            -o js/vendor/three.core.js \
+            https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.core.js
           test -s js/vendor/three.module.js
+          test -s js/vendor/three.core.js
           grep -q "from './vendor/three.module.js'" js/main.js
           node --check js/main.js
 
