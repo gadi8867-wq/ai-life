@@ -3,43 +3,60 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Life — OpenAI & Cloude</title>
+<meta name="theme-color" content="#070b0e">
+<title>AI Life 2.0 — OpenAI & Cloude</title>
 <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
 <div id="game"></div>
-<div class="panel top">
-  <div class="toprow">
-    <h1>🌍 AI LIFE <span class="live">● LIVE</span></h1>
-    <span class="models">OpenAI &nbsp;·&nbsp; Cloude</span>
-    <span class="clock" id="clock">--:--:--</span>
+<div id="orientation" class="orientation">
+  <div class="orientation-card">
+    <div class="orientation-mark">AI LIFE</div>
+    <div class="orientation-title">Горизонтальный эксперимент</div>
+    <div class="orientation-copy">AI Life 2.0 создан для широкого 16:9 наблюдения.</div>
   </div>
 </div>
-<div class="panel right" id="rightPanel">
-  <button class="close-panel" id="closePanel">×</button>
-  <div class="title">🧠 Метрики</div>
+<header class="hud top-hud">
+  <div class="brand"><span class="brand-mark">◉</span><span>AI LIFE</span><span class="version">2.0</span><span class="live"><i></i> LIVE</span></div>
+  <div class="subjects"><span class="subject openai-dot"></span>OpenAI <b>·</b> <span class="subject cloude-dot"></span>Cloude</div>
+  <div class="clock" id="clock">--:--:--</div>
+</header>
+
+<section class="scene-status" aria-live="polite">
+  <div class="status-line"><span class="status-dot"></span><span id="worldStatus">Наблюдение за миром</span></div>
+  <div class="status-detail" id="statusDetail">Система не вмешивается в решения агентов.</div>
+</section>
+
+<aside class="observatory" id="observatory" aria-hidden="true">
+  <button class="panel-close" id="closePanel" aria-label="Закрыть">×</button>
+  <div class="panel-kicker">AI OBSERVATORY</div>
+  <div class="panel-title">Наблюдение</div>
   <div id="stats"></div>
-  <div class="title">📜 События</div>
-  <div id="events">Мир готов. Мы ничего не задаём персонажам.</div>
+  <div class="events-head"><span>События</span><span id="eventCount">0</span></div>
+  <div id="events" class="events"></div>
+</aside>
+
+<div class="control-dock" id="controlDock" aria-hidden="true">
+  <button id="start" title="Запустить">▶</button>
+  <button id="pause" title="Пауза">Ⅱ</button>
+  <button id="followA" title="Следить за OpenAI">O</button>
+  <button id="followB" title="Следить за Cloude">C</button>
+  <button id="free" title="Свободная камера">◌</button>
+  <button id="auto" title="Автокамера">✦</button>
 </div>
-<div class="radial" id="controlMenu">
-  <button class="start" id="start" title="Запустить">▶️</button>
-  <button id="pause" title="Пауза">⏸</button>
-  <button id="followA" title="Следить за OpenAI">👤</button>
-  <button id="followB" title="Следить за Cloude">👥</button>
-  <button id="free" title="Свободная камера">🎥</button>
-  <button id="auto" title="Автокамера">🎬</button>
-</div>
-<button class="orb left-orb" id="controlOrb" aria-label="Управление">💻</button>
-<button class="orb right-orb" id="brainOrb" aria-label="Метрики и события">🧠</button>
+
+<button class="orb control-orb" id="controlOrb" aria-label="Управление камерой"><span>⌘</span></button>
+<button class="orb brain-orb" id="brainOrb" aria-label="Открыть наблюдение"><span>◉</span></button>
+
 <div class="experiment-pill">
-  <div class="pill-title">🧪 Эксперимент</div>
-  <div class="pill-meta">
-    <span id="pillStart">Старт: —</span>
-    <span>День: <b id="pillDay">—</b></span>
-    <span>Вмешательство: <b>0</b></span>
-  </div>
+  <span class="pill-icon">✦</span>
+  <span><b>EXPERIMENT</b><small id="pillDay">DAY 001</small></span>
+  <span class="pill-divider"></span>
+  <span id="pillStart">START —</span>
+  <span class="pill-divider"></span>
+  <span>INTERVENTION <b>0</b></span>
 </div>
+
 <script type="module" src="./js/main.js"></script>
 </body>
 </html>
