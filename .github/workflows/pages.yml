@@ -24,6 +24,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fix Three.js CDN for Pages runtime
+        run: sed -i "s#https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js#https://unpkg.com/three@0.180.0/build/three.module.js#g" js/main.js
+
+      - name: Validate JavaScript syntax
+        run: node --check js/main.js
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
