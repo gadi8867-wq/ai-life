@@ -24,16 +24,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare self-contained Three.js runtime
+      - name: Prepare local Three.js runtime
         run: |
           mkdir -p js/vendor
-          curl -fsSL --retry 3 --retry-delay 2 -o js/vendor/three.module.js https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js
+          curl -fsSL --retry 3 --retry-delay 2 \
+            -o js/vendor/three.module.js \
+            https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js
           test -s js/vendor/three.module.js
-          sed -i "s#https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js#./vendor/three.module.js#g" js/main.js
+          grep -q "from './vendor/three.module.js'" js/main.js
           node --check js/main.js
-          cp js/main.js js/main-20260917.js
-          sed -i 's#./js/main.js#./js/main-20260917.js#g' index.html
-          grep -q './js/main-20260917.js' index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
