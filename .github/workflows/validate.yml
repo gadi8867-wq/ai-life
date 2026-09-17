@@ -1,0 +1,27 @@
+name: Validate AI Life
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check required files
+        run: |
+          test -s index.html
+          test -s css/style.css
+          test -s js/main.js
+      - name: Check JavaScript syntax
+        run: node --check js/main.js
+      - name: Ensure index is only the HTML shell
+        run: |
+          ! grep -q "import \\* from 'https://cdn.jsdelivr.net/npm/three" index.html
+          ! grep -q "function makeAgent" index.html
