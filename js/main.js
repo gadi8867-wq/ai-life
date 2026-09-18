@@ -233,6 +233,15 @@ function sceneSnapshot(){
     distance:Number(d.toFixed(2))
   };
 }
+async function requestDialogueStart(){
+  if(!AI_BACKEND||dialogueRequest)return null;
+  const scene=sceneSnapshot();
+  const payload={sessionId:dialogueState.sessionId,scene};
+  dialogueRequest=fetch(AI_BACKEND+'/api/dialogue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>{if(!r.ok)throw new Error('dialogue backend '+r.status);return r.json()})
+    .finally(()=>{dialogueRequest=null});
+  return dialogueRequest;
+}
 async function requestDialogueTurn(speaker){
   if(!AI_BACKEND||dialogueRequest)return null;
   const scene=sceneSnapshot();
@@ -254,7 +263,7 @@ async function autonomousDialogue(){
   try{
     while(dialogueState.turns<dialogueState.maxTurns&&running){
       const speaker=dialogueState.nextSpeaker;
-      const result=await requestDialogueTurn(speaker);
+      const result=dialogueState.turns===0?await requestDialogueStart():await requestDialogueTurn(speaker);
       if(!result)break;
       const decision=result.decision||{};
       const agent=agents.find(a=>a.name===speaker);
