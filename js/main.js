@@ -29,7 +29,7 @@ const mat={
  ground:new THREE.MeshStandardMaterial({color:0x304c38,roughness:1}),
  water:new THREE.MeshPhysicalMaterial({color:0x174a52,roughness:.18,metalness:.05,transmission:.08,transparent:true,opacity:.9}),
  trunk:new THREE.MeshStandardMaterial({color:0x4b3829,roughness:1}),
- leafA:new THREE.MeshStandardMaterial({color:0x2e6040,roughness:.9}),leafB:new THREE.MeshStandardMaterial({color:0x426d4c,roughness:.92}),
+ leafA:new THREE.MeshStandardMaterial({color:0x557344,roughness:.9}),leafB:new THREE.MeshStandardMaterial({color:0xc8793f,roughness:.92}),
  rock:new THREE.MeshStandardMaterial({color:0x68706b,roughness:.95}),grass:new THREE.MeshStandardMaterial({color:0x5d7c50,roughness:1}),ember:new THREE.MeshBasicMaterial({color:0xff9b3d})
 };
 const terrain=new THREE.Group();scene.add(terrain);
@@ -42,10 +42,29 @@ for(let i=0;i<68;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<
 for(let i=0;i<38;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addRock(x,z,rand(.45,1.15))}
 for(let i=0;i<145;i++){let x=rand(-55,55),z=rand(-55,55);if(Math.abs(x-5)<7)x+=x<5?-8:8;addGrass(x,z,rand(.65,1.35))}
 
-const fire=new THREE.Group();fire.position.set(-11,0,9);scene.add(fire);
-for(let i=0;i<5;i++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,2,7),mat.trunk);l.position.y=.22;l.rotation.z=Math.PI/2;l.rotation.y=i*.65;l.rotation.x=.18;l.castShadow=true;fire.add(l)}
-const flame=new THREE.Mesh(new THREE.IcosahedronGeometry(.72,1),mat.ember);flame.position.y=1.05;fire.add(flame);
-const fireLight=new THREE.PointLight(0xff9a4c,4.2,13,2);fireLight.position.y=1.4;fire.add(fireLight);
+const campfires=[];
+function createCampfire(x,z,scale=1){
+  const root=new THREE.Group();root.position.set(x,0,z);root.scale.setScalar(scale);scene.add(root);
+  const stones=new THREE.Group();root.add(stones);
+  for(let i=0;i<9;i++){const a=i*Math.PI*2/9;const s=new THREE.Mesh(new THREE.DodecahedronGeometry(.34,1),mat.rock);s.position.set(Math.cos(a)*1.15,.28,Math.sin(a)*1.15);s.scale.set(1.15,.72,.9);s.rotation.y=a+.3;s.castShadow=true;stones.add(s)}
+  const logs=new THREE.Group();root.add(logs);
+  for(let i=0;i<4;i++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.17,.21,2.1,8),mat.trunk);l.position.y=.38;l.rotation.z=Math.PI/2;l.rotation.y=(i%2?Math.PI/2:0)+.18;l.rotation.x=.16;l.castShadow=true;logs.add(l)}
+  const flameOuterMat=new THREE.MeshStandardMaterial({color:0xff7b32,emissive:0xff3d12,emissiveIntensity:1.7,transparent:true,opacity:.88,roughness:.25});
+  const flameInnerMat=new THREE.MeshStandardMaterial({color:0xffd66b,emissive:0xff8a22,emissiveIntensity:1.9,transparent:true,opacity:.94,roughness:.2});
+  const outer=new THREE.Mesh(new THREE.ConeGeometry(.72,1.9,9),flameOuterMat);outer.position.y=1.25;outer.scale.y=1.12;root.add(outer);
+  const inner=new THREE.Mesh(new THREE.ConeGeometry(.42,1.3,8),flameInnerMat);inner.position.set(.08,1.15,.03);inner.rotation.z=-.12;root.add(inner);
+  const side=new THREE.Mesh(new THREE.ConeGeometry(.3,.9,7),flameInnerMat);side.position.set(-.38,.88,.02);side.rotation.z=.28;root.add(side);
+  const emberMat=new THREE.MeshBasicMaterial({color:0xffa33b,transparent:true,opacity:.9}),embers=[];
+  for(let i=0;i<7;i++){const e=new THREE.Mesh(new THREE.SphereGeometry(.045+Math.random()*.025,6,5),emberMat);e.position.set(rand(-.5,.5),rand(.65,2.1),rand(-.5,.5));root.add(e);embers.push({mesh:e,phase:Math.random()*Math.PI*2,baseY:e.position.y})}
+  const light=new THREE.PointLight(0xff9a4c,4.5,13,2);light.position.y=1.35;root.add(light);
+  const fire={root,outer,inner,side,embers,light,phase:Math.random()*10};campfires.push(fire);return fire;
+}
+const fire=createCampfire(-11,9,1);
+createCampfire(21,-10,1);
+const fireLight=fire.light;
+function updateCampfires(dt,now){
+  campfires.forEach((f,i)=>{const wobble=Math.sin(now*.008+f.phase)*.08;f.outer.scale.x=1+wobble;f.outer.scale.z=1-wobble*.6;f.outer.rotation.y+=dt*(.65+i*.08);f.outer.rotation.z=Math.sin(now*.005+f.phase)*.07;f.inner.scale.x=.94-wobble*.4;f.inner.scale.z=1+wobble*.3;f.inner.rotation.y-=dt*(1.15+i*.12);f.side.rotation.y+=dt*(1.7+i*.15);f.light.intensity=4.1+Math.sin(now*.015+f.phase)*.7+Math.sin(now*.031+f.phase)*.35;f.embers.forEach(e=>{e.mesh.position.y=e.baseY+Math.sin(now*.003+e.phase)*.12;e.mesh.position.x+=Math.sin(now*.0012+e.phase)*dt*.015})})
+}
 
 const worldResources=new THREE.Group();scene.add(worldResources);
 const worldItems=[];
@@ -130,7 +149,10 @@ function chooseLandTarget(a,action){
 const SOLAR={lat:49.4542,lon:11.0775};
 const RAD=Math.PI/180;
 function solarPosition(date=new Date()){const y=date.getUTCFullYear(),start=Date.UTC(y,0,0),day=(date-start)/86400000;const hour=date.getUTCHours()+date.getUTCMinutes()/60+date.getUTCSeconds()/3600+date.getUTCMilliseconds()/3600000;const g=2*Math.PI/365*(day-1+(hour-12)/24);const decl=.006918-.399912*Math.cos(g)+.070257*Math.sin(g)-.006758*Math.cos(2*g)+.000907*Math.sin(2*g)-.002697*Math.cos(3*g)+.00148*Math.sin(3*g);const eq=229.18*(.000075+.001868*Math.cos(g)-.032077*Math.sin(g)-.014615*Math.cos(2*g)-.040849*Math.sin(2*g));const utcMin=date.getUTCHours()*60+date.getUTCMinutes()+date.getUTCSeconds()/60;const solarMin=utcMin+eq+4*SOLAR.lon;const ha=(solarMin/4-180)*RAD;const lat=SOLAR.lat*RAD;const elevation=Math.asin(Math.sin(lat)*Math.sin(decl)+Math.cos(lat)*Math.cos(decl)*Math.cos(ha))/RAD;let azimuth=Math.atan2(Math.sin(ha),Math.cos(ha)*Math.sin(lat)-Math.tan(decl)*Math.cos(lat))/RAD+180;azimuth=(azimuth+360)%360;return{elevation,azimuth,decl,eq}}
-function applySolarLighting(date=new Date()){const s=solarPosition(date),e=s.elevation;const daylight=clamp((e+6)/18);const night=1-daylight;const fullDay=clamp((e+12)/30);const az=s.azimuth*RAD;const er=Math.max(e, -4)*RAD;const horizontal=Math.cos(er);const radius=70;sun.position.set(Math.sin(az)*horizontal*radius,Math.sin(er)*radius,Math.cos(az)*horizontal*radius);sun.target.position.set(0,0,0);moon.position.set(-Math.sin(az)*45,Math.max(8,Math.sin(-er)*45),-Math.cos(az)*45);moon.target.position.set(0,0,0);sun.intensity=lerp(.05,2.7,fullDay);moon.intensity=lerp(.32,.015,daylight);hemi.intensity=lerp(.38,1.35,daylight);sun.color.setHSL(.10+night*.08,.62,lerp(.56,.78,daylight));scene.background.copy(dayColor).lerp(nightColor,clamp(night*.92));scene.fog.color.copy(scene.background);scene.fog.density=lerp(.008,.018,night);fireLight.intensity=lerp(2.5,5.8,night);return{daylight,night,solarElevation:e,solarAzimuth:s.azimuth}}
+function seasonForDate(date=new Date()){const m=date.getMonth()+1;if(m===12||m<=2)return{key:'winter',label:'ЗИМА',leafA:0x6b755e,leafB:0x8b9a8a,ground:0x354238,grass:0x65715c};if(m<=5)return{key:'spring',label:'ВЕСНА',leafA:0x4d8a52,leafB:0x79a95b,ground:0x304c38,grass:0x5d7c50};if(m<=8)return{key:'summer',label:'ЛЕТО',leafA:0x2f6d43,leafB:0x4e8450,ground:0x304c38,grass:0x5d7c50};if(m===9)return{key:'autumn',label:'ОСЕНЬ',leafA:0x687744,leafB:0xb8743e,ground:0x394936,grass:0x6b7755};if(m===10)return{key:'autumn',label:'ОСЕНЬ',leafA:0x7b713f,leafB:0xc2633a,ground:0x3a4534,grass:0x716d4c};return{key:'late-autumn',label:'ПОЗДНЯЯ ОСЕНЬ',leafA:0x665c3b,leafB:0x9b633c,ground:0x343f32,grass:0x65614b}}
+let currentSeason='autumn';
+function applySeasonVisuals(date=new Date()){const season=seasonForDate(date);currentSeason=season.key;mat.leafA.color.setHex(season.leafA);mat.leafB.color.setHex(season.leafB);mat.ground.color.setHex(season.ground);mat.grass.color.setHex(season.grass);return season}
+function applySolarLighting(date=new Date()){const season=applySeasonVisuals(date),s=solarPosition(date),e=s.elevation;const daylight=clamp((e+6)/18);const night=1-daylight;const fullDay=clamp((e+12)/30);const az=s.azimuth*RAD;const er=Math.max(e, -4)*RAD;const horizontal=Math.cos(er);const radius=70;sun.position.set(Math.sin(az)*horizontal*radius,Math.sin(er)*radius,Math.cos(az)*horizontal*radius);sun.target.position.set(0,0,0);moon.position.set(-Math.sin(az)*45,Math.max(8,Math.sin(-er)*45),-Math.cos(az)*45);moon.target.position.set(0,0,0);sun.intensity=lerp(.05,2.7,fullDay);moon.intensity=lerp(.32,.015,daylight);hemi.intensity=lerp(.38,1.35,daylight);sun.color.setHSL(.10+night*.08,.62,lerp(.56,.78,daylight));scene.background.copy(dayColor).lerp(nightColor,clamp(night*.92));scene.fog.color.copy(scene.background);scene.fog.density=lerp(.008,.018,night);fireLight.intensity=lerp(2.5,5.8,night);return{daylight,night,solarElevation:e,solarAzimuth:s.azimuth}}
 
 /* ---------- Autonomous world events ---------- */
 const donationState={lastId:0,polling:false};
@@ -385,8 +407,8 @@ async function autonomousDialogue(){
 }
 
 let last=performance.now(),saveTimer=0;
-function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const world=applySolarLighting(new Date());if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=new Date().toLocaleTimeString('ru-RU',{hour12:false});updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
+function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const world=applySolarLighting(new Date());updateCampfires(dt,now);if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=new Date().toLocaleTimeString('ru-RU',{hour12:false});updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
-addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
+addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Сезоны синхронизированы с календарём: сейчас ОСЕНЬ.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
 renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain};
 requestAnimationFrame(tick);
