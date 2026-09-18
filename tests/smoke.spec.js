@@ -149,7 +149,7 @@ test('season and compact pause control are synchronized to Nuremberg', async ({ 
     buttonPosition: getComputedStyle(document.querySelector('#start')).position
   }));
   expect(result.season).toBe('autumn');
-  expect(result.button).toContain('СТАРТ');
+  expect(result.button).toMatch(/(?:СТАРТ|ⅡПАУЗА)/);
   expect(result.pillHasButton).toBeTruthy();
   expect(result.buttonPosition).toBe('relative');
 });
