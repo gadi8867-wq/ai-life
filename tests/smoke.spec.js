@@ -73,3 +73,17 @@ test('invalid saved positions migrate to the nearest safe land point', async ({ 
   expect(Math.hypot(result[0].x - 5, result[0].z - 0)).toBeLessThan(20);
   expect(Math.hypot(result[1].x - 5, result[1].z - 20)).toBeLessThan(15);
 });
+
+
+test('September uses autumn visuals and both banks have a campfire', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.seasonForDate && window.__AI_LIFE_TEST__?.campfires?.length === 2);
+  const result = await page.evaluate(() => {
+    const api = window.__AI_LIFE_TEST__;
+    const season = api.seasonForDate(new Date('2026-09-18T12:00:00Z'));
+    return { season: season.key, label: season.label, fires: api.campfires.length };
+  });
+  expect(result.season).toBe('autumn');
+  expect(result.label).toBe('ОСЕНЬ');
+  expect(result.fires).toBe(2);
+});
