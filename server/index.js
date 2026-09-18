@@ -7,6 +7,12 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const mode=(process.env.AI_LIFE_MODE||'test').toLowerCase();
 const port=Number(process.env.PORT||8787);
 const sessions=new Map();
+const donationEvents=[];
+let donationSeq=0;
+const MAX_DONATION_QUEUE=100;
+const donationMap={10:'support',25:'gift',50:'ability',100:'resource',150:'weather',250:'environment',500:'unknown',1000:'major'};
+function donationType(amount){const n=Number(amount)||0;let type='support';for(const threshold of Object.keys(donationMap).map(Number).sort((a,b)=>b-a)){if(n>=threshold){type=donationMap[threshold];break}}return type;}
+function pushDonation({amount=0,currency='RUB',name='Аноним',message='',agent=null,type=null}){const item={id:++donationSeq,amount:Number(amount)||0,currency:String(currency||'RUB'),name:cleanText(name)||'Аноним',message:cleanText(message),agent:agent==='OpenAI'||agent==='Cloude'?agent:null,type:type||donationType(amount),time:Date.now()};donationEvents.push(item);while(donationEvents.length>MAX_DONATION_QUEUE)donationEvents.shift();return item;}
 
 const json=(res,status,data)=>{res.writeHead(status,{'content-type':'application/json; charset=utf-8','access-control-allow-origin':'*'});res.end(JSON.stringify(data));};
 const body=async(req)=>{let s='';for await(const c of req)s+=c;if(!s)return{};return JSON.parse(s)};
@@ -82,6 +88,8 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='POST'&&req.url==='/api/brain/cloude'){const b=await body(req);return json(res,200,await callCloude(b.messages||[]))}
     if(req.method==='POST'&&req.url==='/api/dialogue'){const b=await body(req);return json(res,200,await dialogueStart(b))}
     if(req.method==='POST'&&req.url==='/api/dialogue/turn'){const b=await body(req);return json(res,200,await dialogueTurn(b))}
+    if(req.method==='GET'&&req.url.startsWith('/api/donations/events')){const u=new URL(req.url,'http://127.0.0.1');const after=Number(u.searchParams.get('after')||0);return json(res,200,{ok:true,events:donationEvents.filter(x=>x.id>after)})}
+    if(req.method==='POST'&&req.url==='/api/donations/test'){if(mode!=='test')return json(res,403,{error:'test donations disabled'});const b=await body(req);return json(res,200,{ok:true,event:pushDonation(b)})}
     if(req.method==='GET'){
       const p=path.join(root,req.url==='/'?'index.html':req.url.replace(/^\\//,''));
       if(!p.startsWith(root)||!fs.existsSync(p)||fs.statSync(p).isDirectory())return json(res,404,{error:'not found'});
