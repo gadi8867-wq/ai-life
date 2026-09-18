@@ -155,3 +155,28 @@ test('world contains cave shelters', async ({ page }) => {
   expect(result.name).toBe('caves');
   expect(result.children).toBeGreaterThanOrEqual(3);
 });
+
+
+test('real calendar daylight shortens into autumn in Nuremberg', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.solarDaylightWindow && window.__AI_LIFE_TEST__?.seasonInfo);
+  const result = await page.evaluate(() => {
+    const api = window.__AI_LIFE_TEST__;
+    const dates = [
+      new Date(Date.UTC(2026, 5, 21)),
+      new Date(Date.UTC(2026, 8, 21)),
+      new Date(Date.UTC(2026, 10, 21))
+    ];
+    return dates.map(date => ({
+      season: api.seasonInfo(date).key,
+      ...api.solarDaylightWindow(date)
+    }));
+  });
+  expect(result[0].season).toBe('summer');
+  expect(result[1].season).toBe('autumn');
+  expect(result[2].season).toBe('autumn');
+  expect(result[0].dayLengthMin).toBeGreaterThan(result[1].dayLengthMin);
+  expect(result[1].dayLengthMin).toBeGreaterThan(result[2].dayLengthMin);
+  expect(result[1].sunrise).not.toBe('—');
+  expect(result[1].sunset).not.toBe('—');
+});
