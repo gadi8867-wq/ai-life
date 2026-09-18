@@ -43,7 +43,24 @@
   <button id="auto" title="Автокамера">✦</button>
 </div>
 <button class="orb control-orb" id="controlOrb" aria-label="Управление камерой"><span>⌘</span></button>
-<button class="orb brain-orb" id="brainOrb" aria-label="Открыть наблюдение"><span>◉</span></button>
+<button class="orb brain-orb" id="brainOrb" aria-label="Открыть наблюдение"><span>◉</span></button><section class="voice-settings" id="voiceSettings" aria-label="Настройки голосов" aria-hidden="true">
+  <button class="panel-close" id="closeVoiceSettings" aria-label="Закрыть">×</button>
+  <div class="panel-kicker">ГОЛОСА</div>
+  <div class="panel-title">Голоса OpenAI и Cloude</div>
+  <p class="voice-help">Выбери голос отдельно для каждого разума и сразу проверь звучание.</p>
+  <div class="voice-agent" data-agent="OpenAI">
+    <div class="voice-agent-head"><span class="voice-agent-name openai-text">OpenAI</span><span class="voice-status" id="openaiVoiceStatus">по умолчанию</span></div>
+    <label>Голос OpenAI<select id="openaiVoice"></select></label>
+    <button type="button" class="voice-test" data-agent="OpenAI">▶ Проверить голос</button>
+  </div>
+  <div class="voice-agent" data-agent="Cloude">
+    <div class="voice-agent-head"><span class="voice-agent-name cloude-text">Cloude</span><span class="voice-status" id="cloudeVoiceStatus">по умолчанию</span></div>
+    <label>Голос Cloude<select id="cloudeVoice"></select></label>
+    <button type="button" class="voice-test" data-agent="Cloude">▶ Проверить голос</button>
+  </div>
+  <div class="voice-note" id="voiceNote" aria-live="polite">Голоса берутся из доступных голосов браузера.</div>
+</section>
+<button class="orb voice-orb" id="voiceOrb" aria-label="Настройки голосов"><span>♫</span></button>
 <div class="experiment-pill">
   <span class="pill-icon">✦</span>
   <span><b>ЭКСПЕРИМЕНТ</b><small id="pillDay">ДЕНЬ 001</small></span>
