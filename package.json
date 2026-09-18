@@ -5,7 +5,8 @@
     "test:e2e": "playwright test",
     "start:server": "node server/index.js",
     "test:server": "AI_LIFE_MODE=test node server/test.js",
-    "stream:twitch": "node server/twitch-stream.js"
+    "stream:twitch": "node server/twitch-stream.js",
+    "start:twitch": "node server/start-twitch.js"
   },
   "dependencies": {
     "playwright": "^1.55.0"
