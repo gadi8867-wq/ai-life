@@ -101,6 +101,23 @@ for(let i=0;i<68;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<
 for(let i=0;i<38;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addRock(x,z,rand(.45,1.15))}
 for(let i=0;i<145;i++){let x=rand(-55,55),z=rand(-55,55);if(Math.abs(x-5)<7)x+=x<5?-8:8;addGrass(x,z,rand(.65,1.35))}
 
+/* ---------- Cave shelters / quiet places ---------- */
+const caves=new THREE.Group();caves.name='caves';terrain.add(caves);
+const caveDark=new THREE.MeshStandardMaterial({color:0x202725,roughness:1,metalness:.02});
+const caveRock=new THREE.MeshStandardMaterial({color:0x4f5753,roughness:.98});
+function addCave(x,z,scale=1,rotation=0){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rotation;g.scale.setScalar(scale);
+  const back=new THREE.Mesh(new THREE.DodecahedronGeometry(2.9,1),caveRock);back.scale.set(1.25,.9,.72);back.position.set(0,1.8,.55);back.castShadow=true;g.add(back);
+  const left=new THREE.Mesh(new THREE.DodecahedronGeometry(1.7,1),caveRock);left.scale.set(.9,1.25,.9);left.position.set(-1.75,1.25,-.05);left.castShadow=true;g.add(left);
+  const right=left.clone();right.position.x=1.75;g.add(right);
+  const roof=new THREE.Mesh(new THREE.DodecahedronGeometry(1.9,1),caveRock);roof.scale.set(1.35,.72,.95);roof.position.set(0,3.25,-.05);roof.castShadow=true;g.add(roof);
+  const opening=new THREE.Mesh(new THREE.CircleGeometry(1.25,24),caveDark);opening.rotation.x=-Math.PI/2;opening.position.set(0,.06,-.72);g.add(opening);
+  const marker=new THREE.Mesh(new THREE.RingGeometry(1.15,1.28,24),new THREE.MeshBasicMaterial({color:0x18211f,transparent:true,opacity:.28}));marker.rotation.x=-Math.PI/2;marker.position.set(0,.08,-.72);g.add(marker);
+  caves.add(g);
+  return g;
+}
+addCave(-38,34,1.15,-.35);addCave(39,-30,1.05,.65);addCave(-42,-38,.9,.2);
+
 const fire=new THREE.Group();fire.position.set(-11,0,9);scene.add(fire);
 for(let i=0;i<5;i++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,2,7),mat.trunk);l.position.y=.22;l.rotation.z=Math.PI/2;l.rotation.y=i*.65;l.rotation.x=.18;l.castShadow=true;fire.add(l)}
 const flame=new THREE.Mesh(new THREE.IcosahedronGeometry(.72,1),mat.ember);flame.position.y=1.05;fire.add(flame);
