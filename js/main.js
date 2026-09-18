@@ -126,7 +126,7 @@ function frameTarget(){if(cameraMode==='follow'&&selectedAgent)return selectedAg
 function updateCamera(dt){const target=frameTarget();if(cameraMode==='auto'){const spread=dist2(agents[0].root.position,agents[1].root.position);radius=lerp(radius,clamp(38+spread*.55,38,58),dt*.5);yaw+=dt*.035}if(cameraMode==='follow')radius=lerp(radius,20,dt*1.4);const pos=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch)*radius,Math.sin(pitch)*radius,Math.cos(yaw)*Math.cos(pitch)*radius).add(target);camera.position.lerp(pos,1-Math.pow(.001,dt));camera.lookAt(target)}
 
 function updateAgents(dt,now,world){agents.forEach(a=>{a.needs.energy=clamp(a.needs.energy+dt*.004);a.needs.thirst=clamp(a.needs.thirst+dt*.006);a.needs.curiosity=clamp(a.needs.curiosity+dt*.0015);if(now>a.stateUntil&&running){a.brain.decide(world,now);if(Math.random()<.35)addEvent(`${a.name} изменил решение: ${a.state}.`,a.name)}const p=a.root.position,target=a.target,d=dist2(p,target);if(a.state==='resting'){a.body.rotation.z=Math.sin(now*.001+a.phase)*.025;a.needs.energy=clamp(a.needs.energy-dt*.012);a.needs.thirst=clamp(a.needs.thirst-dt*.001)}else if(d>.7&&running){const dir=new THREE.Vector3(target.x-p.x,0,target.z-p.z).normalize();const speed=a.state==='observing another mind'?.55:.72;const nextX=p.x+dir.x*dt*speed,nextZ=p.z+dir.z*dt*speed;if(isWalkable(nextX,nextZ)){p.addScaledVector(dir,dt*speed);a.root.rotation.y=Math.atan2(dir.x,dir.z)}
-else {const safe=chooseSafeSpawn(p.x,p.z);a.target.set(safe.x,0,safe.z);chooseLandTarget(a,a.state==='seeking water'?'water':'explore')}a.needs.energy=clamp(a.needs.energy+dt*.0018);a.needs.thirst=clamp(a.needs.thirst+dt*.0012);a.metrics.exploration=clamp(a.metrics.exploration+dt*.00012)}else if(running){if(a.state==='seeking water'){a.needs.thirst=clamp(a.needs.thirst-dt*.025);a.metrics.survival=clamp(a.metrics.survival+.0007);a.brain.learn('достиг воды')}if(a.state==='exploring'){a.needs.curiosity=clamp(a.needs.curiosity-dt*.02);a.brain.learn('обнаружено новое место')}if(a.state==='observing another mind'){a.needs.social=clamp(a.needs.social-dt*.018);a.metrics.social=clamp(a.metrics.social+.0008);a.brain.learn('замечен другой разум')}a.stateUntil=now+rand(2500,6000)}const bob=Math.sin(now*.0024+a.phase)*.035;a.root.position.y=bob;a.core.scale.setScalar(1+Math.sin(now*.004+a.phase)*.08);a.ring.rotation.z+=dt*.35;projectLabel(a)});const d=dist2(agents[0].root.position,agents[1].root.position);if(d<7&&Math.random()<dt*.08){addEvent('OpenAI и Cloude находятся рядом — наблюдение без вмешательства.');agents[0].needs.social=clamp(agents[0].needs.social+.15);agents[1].needs.social=clamp(agents[1].needs.social+.15)}}
+else {const safe=chooseSafeSpawn(p.x,p.z);a.target.set(safe.x,0,safe.z);chooseLandTarget(a,a.state==='seeking water'?'water':'explore')}a.needs.energy=clamp(a.needs.energy+dt*.0018);a.needs.thirst=clamp(a.needs.thirst+dt*.0012);a.metrics.exploration=clamp(a.metrics.exploration+dt*.00012)}else if(running){if(a.state==='seeking water'){a.needs.thirst=clamp(a.needs.thirst-dt*.025);a.metrics.survival=clamp(a.metrics.survival+.0007);a.brain.learn('достиг воды')}if(a.state==='exploring'){a.needs.curiosity=clamp(a.needs.curiosity-dt*.02);a.brain.learn('обнаружено новое место')}if(a.state==='observing another mind'){a.needs.social=clamp(a.needs.social-dt*.018);a.metrics.social=clamp(a.metrics.social+.0008);a.brain.learn('замечен другой разум')}a.stateUntil=now+rand(2500,6000)}const bob=Math.sin(now*.0024+a.phase)*.035;a.root.position.y=bob;a.core.scale.setScalar(1+Math.sin(now*.004+a.phase)*.08);a.ring.rotation.z+=dt*.35;projectLabel(a)});const d=dist2(agents[0].root.position,agents[1].root.position);dialogueState.lastDistance=d;if(d<8.2){agents[0].needs.social=clamp(agents[0].needs.social+dt*.015);agents[1].needs.social=clamp(agents[1].needs.social+dt*.015);autonomousDialogue()}}
 
 /* ---------- AI dialogue presentation + voice bridge ---------- */
 const dialogueLayer=$('#dialogue-layer');
@@ -168,6 +168,64 @@ function speakAgent(agent,text){
 function receiveDialogue({speaker,text}){const agent=agents.find(a=>a.name===speaker);if(!agent)return;speakAgent(agent,text)}
 window.addEventListener('ai-life:dialogue',e=>receiveDialogue(e.detail||{}));
 function projectLabel(a){const v=a.root.position.clone();v.y=2.9;v.project(camera);const x=(v.x*.5+.5)*innerWidth,y=(-v.y*.5+.5)*innerHeight;a.label.style.transform=`translate(${x}px,${y}px) translate(-50%,-100%)`;const bubble=speechBubbles.get(a.name);if(bubble){bubble.style.transform=`translate(${x}px,${y-4}px) translate(-50%,-100%)`;bubble.style.opacity=(v.z>1||Math.abs(v.x)>1)?'0':''}a.label.style.opacity=(v.z>1||Math.abs(v.x)>1)?'0':'1';const state=a.label.querySelector('.agent-state-tag');if(state)state.textContent=({resting:'отдыхает','seeking water':'ищет воду','observing another mind':'наблюдает','exploring':'исследует',wandering:'бродит',observing:'наблюдает'})[a.state]||a.state}
+
+/* ---------- Autonomous real-AI dialogue bridge ---------- */
+const AI_BACKEND=(location.hostname==='127.0.0.1'||location.hostname==='localhost')?'http://127.0.0.1:8787':'';
+const dialogueState={active:false,sessionId:null,nextSpeaker:'OpenAI',cooldownUntil:0,turns:0,maxTurns:6,lastDistance:999};
+let dialogueRequest=null;
+function sceneSnapshot(){
+  const [a,b]=agents;
+  const d=dist2(a.root.position,b.root.position);
+  return {
+    time:new Date().toISOString(),
+    daylight:solarPosition(new Date()).elevation,
+    agents:agents.map(x=>({name:x.name,x:Number(x.root.position.x.toFixed(2)),z:Number(x.root.position.z.toFixed(2)),state:x.state,needs:{...x.needs},metrics:{...x.metrics},recentMemory:x.memory.slice(-4)})),
+    distance:Number(d.toFixed(2))
+  };
+}
+async function requestDialogueTurn(speaker){
+  if(!AI_BACKEND||dialogueRequest)return null;
+  const scene=sceneSnapshot();
+  const payload={sessionId:dialogueState.sessionId,speaker,scene};
+  dialogueRequest=fetch(AI_BACKEND+'/api/dialogue/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>{if(!r.ok)throw new Error('dialogue backend '+r.status);return r.json()})
+    .finally(()=>{dialogueRequest=null});
+  return dialogueRequest;
+}
+async function autonomousDialogue(){
+  if(!running||!AI_BACKEND||dialogueState.active||Date.now()<dialogueState.cooldownUntil)return;
+  const d=dist2(agents[0].root.position,agents[1].root.position);
+  if(d>8.2)return;
+  dialogueState.active=true;
+  dialogueState.sessionId='encounter-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+  dialogueState.nextSpeaker='OpenAI';
+  dialogueState.turns=0;
+  addEvent('OpenAI и Cloude заметили друг друга. Разговор начинается только по решению их мозгов.');
+  try{
+    while(dialogueState.turns<dialogueState.maxTurns&&running){
+      const speaker=dialogueState.nextSpeaker;
+      const result=await requestDialogueTurn(speaker);
+      if(!result)break;
+      const decision=result.decision||{};
+      const agent=agents.find(a=>a.name===speaker);
+      if(decision.speak&&decision.text){
+        receiveDialogue({speaker,text:decision.text});
+        addEvent(`${speaker}: «${decision.text}»`,speaker);
+        if(agent)agent.memory.push({time:Date.now(),state:'dialogue',result:decision.text});
+      }
+      dialogueState.turns++;
+      if(decision.continue===false||!decision.speak)break;
+      dialogueState.nextSpeaker=speaker==='OpenAI'?'Cloude':'OpenAI';
+      await new Promise(resolve=>setTimeout(resolve,900));
+    }
+  }catch(error){
+    addEvent('Связь с AI-мозгом временно недоступна. Симуляция продолжает жить без вмешательства.',null);
+    console.error(error);
+  }finally{
+    dialogueState.active=false;
+    dialogueState.cooldownUntil=Date.now()+30000;
+  }
+}
 
 let last=performance.now(),saveTimer=0;
 function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const world=applySolarLighting(new Date());if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateCamera(dt);$('#clock').textContent=new Date().toLocaleTimeString('ru-RU',{hour12:false});updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
