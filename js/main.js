@@ -134,7 +134,7 @@ const speechBubbles=new Map();
 let availableVoices=[];
 function refreshVoices(){availableVoices='speechSynthesis' in window?speechSynthesis.getVoices():[]}
 refreshVoices();
-if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged',refreshVoices);
+if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged',()=>{refreshVoices();populateVoiceSelects?.()});
 function showSpeech(agent,text,duration=6500){
   if(!text||!dialogueLayer)return;
   let bubble=speechBubbles.get(agent.name);
@@ -153,13 +153,63 @@ function pickVoice(agent){
   const idx=agent.name==='Cloude'?1:0;
   return pool[idx%pool.length]||null;
 }
+
+/* ---------- Separate voice controls ---------- */
+const voicePrefs={OpenAI:null,Cloude:null};
+function voiceSelects(){return {OpenAI:$('#openaiVoice'),Cloude:$('#cloudeVoice')}}
+function populateVoiceSelects(){
+  const selects=voiceSelects();
+  Object.entries(selects).forEach(([agent,select])=>{
+    if(!select)return;
+    const current=voicePrefs[agent];
+    select.innerHTML='';
+    if(!availableVoices.length){
+      const o=document.createElement('option');o.value='';o.textContent='Голоса браузера ещё не загружены';select.appendChild(o);return;
+    }
+    const ru=availableVoices.filter(v=>/^ru(-|_)/i.test(v.lang));
+    const pool=ru.length?ru:availableVoices;
+    pool.forEach((v,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=`${v.name} — ${v.lang}`;o.dataset.voiceName=v.name;o.dataset.voiceLang=v.lang;select.appendChild(o)});
+    const wanted=pool.findIndex(v=>v.name===current);
+    select.selectedIndex=wanted>=0?wanted:Math.min(agent==='Cloude'?1:0,pool.length-1);
+  });
+}
+function selectedVoice(agent){
+  const select=voiceSelects()[agent];
+  const pool=availableVoices.filter(v=>/^ru(-|_)/i.test(v.lang);
+  const list=pool.length?pool:availableVoices;
+  const v=list[Number(select?.value)||0];
+  voicePrefs[agent]=v?.name||null;
+  return v||null;
+}
+function updateVoiceStatus(agent,text){
+  const el=$(`#${agent.toLowerCase()}VoiceStatus`);
+  if(el)el.textContent=text;
+}
+function testAgentVoice(agent){
+  const a=agents.find(x=>x.name===agent); if(!a)return;
+  const voice=selectedVoice(agent);
+  if(!('speechSynthesis' in window)){const n=$('#voiceNote');if(n)n.textContent='Этот браузер не поддерживает SpeechSynthesis.';return}
+  const sample=agent==='OpenAI'?'Проверка голоса OpenAI. Я продолжаю наблюдение.':'Проверка голоса Cloude. Я продолжаю наблюдение.';
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(sample);u.lang=voice?.lang||'ru-RU';u.voice=voice||null;u.rate=agent==='Cloude'?.96:1.02;u.pitch=agent==='Cloude'?.88:1.08;u.volume=.92;
+  speechSynthesis.speak(u);
+  updateVoiceStatus(agent,voice?`✓ ${voice.name}`:'голос по умолчанию');
+}
+const voicePanel=$('#voiceSettings'),voiceOrb=$('#voiceOrb');
+voiceOrb?.addEventListener('click',()=>{const open=voicePanel.classList.toggle('open');voicePanel.setAttribute('aria-hidden',String(!open));populateVoiceSelects()});
+$('#closeVoiceSettings')?.addEventListener('click',()=>{voicePanel.classList.remove('open');voicePanel.setAttribute('aria-hidden','true')});
+document.querySelectorAll('.voice-test').forEach(b=>b.addEventListener('click',()=>testAgentVoice(b.dataset.agent)));
+$('#openaiVoice')?.addEventListener('change',()=>{const v=selectedVoice('OpenAI');updateVoiceStatus('OpenAI',v?`✓ ${v.name}`:'голос по умолчанию')});
+$('#cloudeVoice')?.addEventListener('change',()=>{const v=selectedVoice('Cloude');updateVoiceStatus('Cloude',v?`✓ ${v.name}`:'голос по умолчанию')});
+
 function speakAgent(agent,text){
   showSpeech(agent,text);
   if(!('speechSynthesis' in window))return;
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(String(text));
-  u.lang='ru-RU';
-  u.voice=pickVoice(agent);
+  const chosen=selectedVoice(agent);
+  u.lang=chosen?.lang||'ru-RU';
+  u.voice=chosen||pickVoice(agent);
   u.rate=agent.name==='Cloude'?.96:1.02;
   u.pitch=agent.name==='Cloude'?.88:1.08;
   u.volume=.92;
