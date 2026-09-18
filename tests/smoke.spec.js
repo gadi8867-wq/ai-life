@@ -130,3 +130,19 @@ test('autumn calendar changes smoothly week to week', async ({ page }) => {
   expect(result.climate[5].rainTarget).toBeLessThanOrEqual(1);
   expect(result.later).toBeGreaterThan(result.early);
 });
+
+
+test('season and compact pause control are synchronized to Nuremberg', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.seasonInfo && document.querySelector('#start'));
+  const result = await page.evaluate(() => ({
+    season: window.__AI_LIFE_TEST__.seasonInfo(new Date(Date.UTC(2026, 8, 18))).key,
+    button: document.querySelector('#start')?.textContent?.trim(),
+    pillHasButton: Boolean(document.querySelector('.experiment-pill #start')),
+    buttonPosition: getComputedStyle(document.querySelector('#start')).position
+  }));
+  expect(result.season).toBe('autumn');
+  expect(result.button).toContain('СТАРТ');
+  expect(result.pillHasButton).toBeTruthy();
+  expect(result.buttonPosition).toBe('relative');
+});
