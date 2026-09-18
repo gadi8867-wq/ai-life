@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('AI Life 16:9 scene keeps agents and three events visible', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('#game canvas');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.agents?.length === 2);
   await page.waitForTimeout(2500);
 
   await expect(page.locator('.agent-label')).toHaveCount(2);
