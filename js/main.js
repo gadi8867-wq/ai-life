@@ -85,15 +85,57 @@ terrain.add(bankPebbles);
 const trees=[];
 function yearDay(date=new Date()){const y=date.getUTCFullYear();return Math.floor((Date.UTC(y,date.getUTCMonth(),date.getUTCDate())-Date.UTC(y,0,1))/86400000)+1}
 function smoothstep(t){t=clamp(t);return t*t*(3-2*t)}
-function autumnProgress(date=new Date()){const y=date.getUTCFullYear();return smoothstep((date.getTime()-Date.UTC(y,8,1))/(Date.UTC(y,11,1)-Date.UTC(y,8,1)))}
-function seasonInfo(date=new Date()){const m=date.getMonth();if(m>=2&&m<=4)return{name:'Весна',emoji:'🌱',key:'spring',progress:0};if(m>=5&&m<=7)return{name:'Лето',emoji:'☀️',key:'summer',progress:0};if(m>=8&&m<=10)return{name:'Осень',emoji:'🍂',key:'autumn',progress:autumnProgress(date)};return{name:'Зима',emoji:'❄️',key:'winter',progress:1}}
-const seasonPalettes={spring:{leafA:[.32,.58,.38],leafB:[.25,.48,.31],ground:[.29,.34,.23],grass:[.30,.49,.34],trunk:[.07,.30,.23]},summer:{leafA:[.34,.64,.36],leafB:[.29,.58,.32],ground:[.30,.37,.22],grass:[.31,.52,.34],trunk:[.08,.34,.27]},autumn:{leafA:[.28,.46,.30],leafB:[.075,.78,.50],ground:[.075,.22,.18],grass:[.22,.40,.28],trunk:[.055,.34,.22]},winter:{leafA:[.58,.12,.48],leafB:[.58,.10,.38],ground:[.58,.08,.72],grass:[.58,.10,.65],trunk:[.58,.12,.32]}};
+function autumnProgress(date=new Date()){
+  const y=date.getUTCFullYear();
+  const start=Date.UTC(y,8,1),end=Date.UTC(y,10,30);
+  return clamp((date.getTime()-start)/(end-start));
+}
+function seasonInfo(date=new Date()){
+  const m=date.getMonth();
+  if(m>=2&&m<=4)return{name:'Весна',emoji:'🌱',key:'spring',progress:0};
+  if(m>=5&&m<=7)return{name:'Лето',emoji:'☀️',key:'summer',progress:0};
+  if(m>=8&&m<=10)return{name:'Осень',emoji:'🍂',key:'autumn',progress:autumnProgress(date)};
+  return{name:'Зима',emoji:'❄️',key:'winter',progress:1};
+}
+const seasonPalettes={spring:{leafA:[.32,.58,.38],leafB:[.25,.48,.31],ground:[.29,.34,.23],grass:[.30,.49,.34],trunk:[.07,.30,.23]},summer:{leafA:[.34,.64,.36],leafB:[.29,.58,.32],ground:[.30,.37,.22],grass:[.31,.52,.34],trunk:[.08,.34,.27]},autumn:{leafA:[.24,.45,.31],leafB:[.12,.62,.43],ground:[.19,.27,.18],grass:[.22,.40,.28],trunk:[.055,.34,.22]},winter:{leafA:[.58,.12,.48],leafB:[.58,.10,.38],ground:[.58,.08,.72],grass:[.58,.10,.65],trunk:[.58,.12,.32]}};
 function seasonColor(hsl){const c=new THREE.Color();c.setHSL(hsl[0],hsl[1],hsl[2]);return c}
 function autumnClimate(date=new Date()){const p=autumnProgress(date),d=yearDay(date),weekly=.5+.5*Math.sin((d-248)/7*2*Math.PI),slow=.5+.5*Math.sin((d-252)/19*2*Math.PI);return{progress:p,temperature:lerp(15.5,5.5,p)+lerp(1.2,-1.2,slow)+lerp(.5,-.5,weekly),rainTarget:clamp(.30+.38*p+.14*slow+.06*weekly)}}
 const seasonLeaves=(()=>{const count=150,positions=new Float32Array(count*3),drift=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=rand(-58,58);positions[i*3+1]=rand(2,18);positions[i*3+2]=rand(-58,58);drift[i*3]=rand(-.35,.35);drift[i*3+1]=rand(.65,1.35);drift[i*3+2]=rand(-.25,.25)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const points=new THREE.Points(geometry,new THREE.PointsMaterial({color:0xe0a04b,size:.14,transparent:true,opacity:.72,depthWrite:false}));points.visible=false;scene.add(points);return{points,positions,drift}})();
 const leafBed=(()=>{const count=620,positions=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=rand(-55,55);positions[i*3+1]=.035;positions[i*3+2]=rand(-55,55)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const material=new THREE.PointsMaterial({color:0xb06a35,size:.16,transparent:true,opacity:0,depthWrite:false});const points=new THREE.Points(geometry,material);scene.add(points);return points})();
-function applySeason(date=new Date()){const s=seasonInfo(date),p=s.key==='autumn'?s.progress:0,palette=seasonPalettes[s.key],climate=autumnClimate(date);trees.forEach(t=>t.foliage.forEach((mesh,i)=>{if(s.key==='autumn'){const warm=clamp(t.warmBias*.55+p*.9),hue=lerp(i%2===0?.28:.16,.055,warm),sat=lerp(.44,.82,warm),light=lerp(.25,.43,warm);mesh.material.color.copy(seasonColor([hue,sat,light]))}else{const base=i%2===0?palette.leafA:palette.leafB;mesh.material.color.copy(seasonColor([base[0],base[1],clamp(base[2]+(t.warmBias-.5)*.035,.12,.62)]))}}));mat.ground.color.copy(seasonColor(palette.ground));mat.grass.color.copy(seasonColor(palette.grass));mat.trunk.color.copy(seasonColor(palette.trunk));seasonLeaves.points.visible=s.key==='autumn';seasonLeaves.points.material.opacity=s.key==='autumn'?lerp(.22,.78,p):0;leafBed.material.opacity=s.key==='autumn'?lerp(.035,.48,p):0;return{...s,temperatureC:climate.temperature,rainTarget:climate.rainTarget,leafAccumulation:p}}
-function updateSeasonLeaves(dt){if(!seasonLeaves.points.visible)return;const p=seasonLeaves.positions,d=seasonLeaves.drift;for(let i=0;i<p.length/3;i++){p[i*3]+=d[i*3]*dt;p[i*3+1]-=d[i*3+1]*dt;p[i*3+2]+=d[i*3+2]*dt;if(p[i*3+1]<.2){p[i*3+1]=rand(9,18);p[i*3]=rand(-58,58);p[i*3+2]=rand(-58,58)}}seasonLeaves.points.geometry.attributes.position.needsUpdate=true;seasonLeaves.points.rotation.y+=dt*.015}
+function applySeason(date=new Date()){
+  const s=seasonInfo(date),p=s.key==='autumn'?s.progress:0,palette=seasonPalettes[s.key],climate=autumnClimate(date);
+  trees.forEach(t=>t.foliage.forEach((mesh,i)=>{
+    if(s.key==='autumn'){
+      // Early September is intentionally mixed: green, amber and russet coexist.
+      const phase=clamp(.16+p*.96+t.warmBias*.18);
+      const baseHue=i%2===0?.29:.17;
+      const hue=lerp(baseHue,.055,phase);
+      const sat=lerp(.46,.88,phase);
+      const light=lerp(.27,.43,phase);
+      mesh.material.color.copy(seasonColor([hue,sat,light]));
+    }else{
+      const base=i%2===0?palette.leafA:palette.leafB;
+      mesh.material.color.copy(seasonColor([base[0],base[1],clamp(base[2]+(t.warmBias-.5)*.035,.12,.62)]));
+    }
+  }));
+  mat.ground.color.copy(seasonColor(palette.ground));mat.grass.color.copy(seasonColor(palette.grass));mat.trunk.color.copy(seasonColor(palette.trunk));
+  seasonLeaves.points.visible=s.key==='autumn';
+  seasonLeaves.points.material.opacity=s.key==='autumn'?lerp(.28,.84,p):0;
+  leafBed.material.opacity=s.key==='autumn'?lerp(.055,.52,p):0;
+  return{...s,temperatureC:climate.temperature,rainTarget:climate.rainTarget,leafAccumulation:p};
+}
+function updateSeasonLeaves(dt){
+  if(!seasonLeaves.points.visible)return;
+  const p=seasonLeaves.positions,d=seasonLeaves.drift,wind=weather.wind;
+  for(let i=0;i<p.length/3;i++){
+    p[i*3]+=(d[i*3]+wind*.08)*dt;
+    p[i*3+1]-=d[i*3+1]*dt;
+    p[i*3+2]+=(d[i*3+2]+wind*.035)*dt;
+    if(p[i*3+1]<.2){p[i*3+1]=rand(9,18);p[i*3]=rand(-58,58);p[i*3+2]=rand(-58,58)}
+  }
+  seasonLeaves.points.geometry.attributes.position.needsUpdate=true;
+  seasonLeaves.points.rotation.y+=dt*(.015+Math.abs(wind)*.004);
+}
 function addTree(x,z,s=1,v=0){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);const t=new THREE.Mesh(new THREE.CylinderGeometry(.25,.38,2.8,7),mat.trunk);t.position.y=1.4;t.castShadow=true;g.add(t);const foliage=[];const c=new THREE.Mesh(new THREE.DodecahedronGeometry(1.7,1),new THREE.MeshStandardMaterial({color:0x2e6040,roughness:.9,flatShading:true}));c.position.y=3.15;c.scale.y=1.18;c.castShadow=true;g.add(c);foliage.push(c);if(v%3===0){const c2=c.clone();c2.material=c.material.clone();c2.scale.setScalar(.68);c2.position.set(.75,4.15,-.25);g.add(c2);foliage.push(c2)}trees.push({group:g,foliage,warmBias:((v*37)%100)/100});terrain.add(g)}
 function addRock(x,z,s=1){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(.75),mat.rock);r.position.set(x,.45*s,z);r.scale.set(s*rand(.8,1.35),s*rand(.65,1),s*rand(.75,1.25));r.rotation.set(rand(-.3,.3),rand(0,Math.PI),rand(-.2,.2));r.castShadow=true;terrain.add(r)}
 function addGrass(x,z,s=1){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.ConeGeometry(.055,rand(.35,.65),4),mat.grass);b.position.set(rand(-.22,.22),b.geometry.parameters.height/2,rand(-.22,.22));b.rotation.z=rand(-.25,.25);g.add(b)}terrain.add(g)}
