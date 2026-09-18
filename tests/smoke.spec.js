@@ -34,6 +34,7 @@ test('AI Life 16:9 scene keeps agents visible', async ({ page }) => {
 test('agents stay on land and wandering changes coordinates', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => window.__AI_LIFE_TEST__?.agents?.length === 2);
+  await page.locator('#start').click();
   const result = await page.evaluate(async () => {
     const api = window.__AI_LIFE_TEST__;
     api.agents.forEach((a, i) => {
