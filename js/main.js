@@ -36,6 +36,49 @@ const terrain=new THREE.Group();scene.add(terrain);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(WORLD,WORLD,50,50),mat.ground);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;terrain.add(ground);
 const river=new THREE.Mesh(new THREE.PlaneGeometry(13,WORLD+10),mat.water);river.rotation.x=-Math.PI/2;river.position.set(5,.08,0);river.rotation.z=.045;terrain.add(river);
 
+const bridge=new THREE.Group();
+bridge.name='river-bridge';
+bridge.position.set(5,.34,0);
+bridge.rotation.z=.045;
+const bridgeWood=new THREE.MeshStandardMaterial({color:0x765338,roughness:.78,metalness:.04});
+const bridgeEdge=new THREE.MeshStandardMaterial({color:0x4a3323,roughness:.9,metalness:.02});
+for(let i=0;i<11;i++){
+  const plank=new THREE.Mesh(new THREE.BoxGeometry(1.55,.22,3.5),bridgeWood);
+  plank.position.x=-7.5+i*1.5;
+  plank.position.y=.04;
+  plank.castShadow=true;
+  plank.receiveShadow=true;
+  bridge.add(plank);
+}
+const beamL=new THREE.Mesh(new THREE.BoxGeometry(19,.34,.24),bridgeEdge);
+beamL.position.set(0,.2,-1.72);beamL.castShadow=true;bridge.add(beamL);
+const beamR=beamL.clone();beamR.position.z=1.72;bridge.add(beamR);
+for(const x of [-7.6,-3.8,0,3.8,7.6]){
+  for(const z of [-1.72,1.72]){
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,1.65,7),bridgeEdge);
+    post.position.set(x,.78,z);post.castShadow=true;bridge.add(post);
+  }
+}
+const railL=new THREE.Mesh(new THREE.BoxGeometry(19,.16,.16),bridgeEdge);
+railL.position.set(0,1.5,-1.72);railL.castShadow=true;bridge.add(railL);
+const railR=railL.clone();railR.position.z=1.72;bridge.add(railR);
+const bridgeShadow=new THREE.Mesh(new THREE.BoxGeometry(18.5,.05,3.9),new THREE.MeshStandardMaterial({color:0x2b2018,transparent:true,opacity:.28}));
+bridgeShadow.position.y=-.03;bridge.add(bridgeShadow);
+terrain.add(bridge);
+
+const bankMat=new THREE.MeshStandardMaterial({color:0x8b7453,roughness:1,metalness:0});
+const bankLeft=new THREE.Mesh(new THREE.PlaneGeometry(2.1,WORLD+10),bankMat);
+bankLeft.rotation.x=-Math.PI/2;bankLeft.rotation.z=.045;bankLeft.position.set(5-8.05,.075,0);terrain.add(bankLeft);
+const bankRight=bankLeft.clone();bankRight.position.x=5+8.05;terrain.add(bankRight);
+const bankPebbles=new THREE.Group();bankPebbles.name='river-banks';
+for(let i=0;i<34;i++){
+  const z=rand(-53,53),riverX=5-z*.045,side=i%2===0?-1:1;
+  const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(rand(.09,.22),0),mat.rock);
+  pebble.position.set(riverX+side*rand(6.65,7.8),rand(.12,.25),z);
+  pebble.scale.y=rand(.45,.8);pebble.rotation.y=rand(0,Math.PI);pebble.castShadow=true;bankPebbles.add(pebble);
+}
+terrain.add(bankPebbles);
+
 /* ---------- Real calendar seasons ----------
  * The world follows the real calendar at the experiment location. September is autumn.
  * Trees, ground and atmosphere transition with the real date instead of a fixed preset.
@@ -87,13 +130,13 @@ function updateRain(dt){if(!weather.rain)return;const p=rain.geometry.attributes
 
 const agentColors={OpenAI:0x63c9e8,Cloude:0xe7a45e},agents=[];
 function makeAgent(name,color,x,z){const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);const glow=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.12,side:THREE.BackSide});const shell=new THREE.MeshStandardMaterial({color:0xc5d4d1,metalness:.45,roughness:.32});const dark=new THREE.MeshStandardMaterial({color:0x182126,metalness:.25,roughness:.5});const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.85,5,12),shell);body.position.y=1.05;body.castShadow=true;root.add(body);const core=new THREE.Mesh(new THREE.SphereGeometry(.24,16,12),new THREE.MeshBasicMaterial({color}));core.position.set(0,1.2,.48);root.add(core);const halo=new THREE.Mesh(new THREE.SphereGeometry(1.05,20,16),glow);halo.position.y=1.1;root.add(halo);const eye=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),dark);eye.position.set(0,1.47,.48);root.add(eye);const footL=new THREE.Mesh(new THREE.SphereGeometry(.24,12,8),dark);footL.scale.y=.55;footL.position.set(-.23,.33,0);root.add(footL);const footR=footL.clone();footR.position.x=.23;root.add(footR);const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.018,8,48),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.38}));ring.rotation.x=Math.PI/2;ring.position.y=.03;root.add(ring);const label=document.createElement('div');label.className='agent-label';label.innerHTML=`<span class="agent-name-tag">${name}</span><span class="agent-state-tag">наблюдает</span>`;label.style.setProperty('--agent-color',`#${color.toString(16).padStart(6,'0')}`);document.body.appendChild(label);return{name,color,root,body,core,halo,ring,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05,hunger:.2},abilities:[],brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:''}}
-agents.push(makeAgent('OpenAI',agentColors.OpenAI,-15,-4));agents.push(makeAgent('Cloude',agentColors.Cloude,17,12));
+agents.push(makeAgent('OpenAI',agentColors.OpenAI,-22,-4));agents.push(makeAgent('Cloude',agentColors.Cloude,24,12));
 
 class AgentBrain{constructor(agent){this.agent=agent;this.lastThought='наблюдает'}observe(world){const a=this.agent,o=agents.find(x=>x!==a),d=o?dist2(a.root.position,o.root.position):999;const item=nearestVisibleItem(a);return{self:{x:a.root.position.x,z:a.root.position.z},daylight:world.daylight,distanceToOther:d,state:a.state,needs:{...a.needs},abilities:[...a.abilities],nearbyItem:item?{kind:item.kind,distance:Math.hypot(a.root.position.x-item.mesh.position.x,a.root.position.z-item.mesh.position.z)}:null,weather:{rain:weather.rain,wind:weather.wind},recentMemory:a.memory.slice(-4)}}decide(world,now){const a=this.agent,o=agents.find(x=>x!==a),d=o?dist2(a.root.position,o.root.position):999;const item=nearestVisibleItem(a);const itemDistance=item?Math.hypot(a.root.position.x-item.mesh.position.x,a.root.position.z-item.mesh.position.z):999;const choices=[{w:a.needs.thirst*1.9,action:'water'},{w:a.needs.energy*1.4,action:'rest'},{w:a.needs.hunger*1.35*(item?1.25:0),action:'resource'},{w:a.needs.curiosity*daylightFactor(world.daylight)*1.5,action:'explore'},{w:(d<10?.65:.06)*a.needs.social,action:'social'},{w:.25+Math.random()*.2,action:'wander'}];choices.sort((x,y)=>y.w-x.w);const top=choices[0];this.lastThought=top.action;a.state=top.action==='water'?'seeking water':top.action==='rest'?'resting':top.action==='social'?'observing another mind':top.action==='explore'?'exploring':top.action==='resource'?'seeking resource':'wandering';a.stateUntil=now+rand(5000,11000);if(top.action==='water')chooseLandTarget(a,'water');else if(top.action==='rest')a.target.copy(a.root.position);else if(top.action==='resource'&&item){a.target.copy(item.mesh.position)}else if(top.action==='social'&&o){a.target.copy(o.root.position);if(!isWalkable(a.target.x,a.target.z))a.target.x+=a.target.x<5?9:-9}else chooseLandTarget(a,top.action);a.metrics.autonomy=clamp(a.metrics.autonomy+.003);a.metrics.decision=clamp(a.metrics.decision+(top.w>.55?.002:-.0003));if(top.action==='resource'&&itemDistance>1.2)a.metrics.exploration=clamp(a.metrics.exploration+.0006)}learn(result){const a=this.agent;a.memory.push({time:Date.now(),state:a.state,result});if(a.memory.length>40)a.memory.shift();a.metrics.learning=clamp(a.metrics.learning+.006);a.metrics.exploration=clamp(a.metrics.exploration+.0015)}}
 agents.forEach(a=>a.brain=new AgentBrain(a));
 spawnWorldItem('resource',-28,-18);spawnWorldItem('resource',31,-25);spawnWorldItem('resource',-34,27);
 function daylightFactor(v){return clamp((v+.2)/1.2)}
-function isWalkable(x,z){if(Math.abs(x)>55||Math.abs(z)>55)return false;const riverX=5-z*.045;return Math.abs(x-riverX)>7.2}
+function isWalkable(x,z){if(Math.abs(x)>55||Math.abs(z)>55)return false;const riverX=5-z*.045;const bridgeCorridor=Math.abs(z)<=2.15&&Math.abs(x-riverX)<=9.2;if(bridgeCorridor)return true;return Math.abs(x-riverX)>7.2}
 function chooseSafeSpawn(x,z){let best=null,bestD=Infinity;for(let i=0;i<120;i++){const a=rand(-50,50),b=rand(-50,50);if(!isWalkable(a,b))continue;const d=Math.hypot(a-x,b-z);if(d<bestD){bestD=d;best={x:a,z:b}}}return best||{x:0,z:0}}
 function chooseLandTarget(a,action){
   const candidates=[];
@@ -398,5 +441,5 @@ let last=performance.now(),saveTimer=0;
 function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · Наблюдение за миром';$('#statusDetail').textContent=world.night>.55?'Сейчас ночь · сезонная темнота наступает раньше.':'Сейчас день · освещение синхронизировано с реальным солнечным временем.';updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
 addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
-renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,applySeason,seasonPalettes,trees};
+renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,applySeason,seasonPalettes,trees,bridge};
 requestAnimationFrame(tick);
