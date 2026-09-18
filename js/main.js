@@ -127,11 +127,51 @@ function updateCamera(dt){const target=frameTarget();if(cameraMode==='auto'){con
 
 function updateAgents(dt,now,world){agents.forEach(a=>{a.needs.energy=clamp(a.needs.energy+dt*.004);a.needs.thirst=clamp(a.needs.thirst+dt*.006);a.needs.curiosity=clamp(a.needs.curiosity+dt*.0015);if(now>a.stateUntil&&running){a.brain.decide(world,now);if(Math.random()<.35)addEvent(`${a.name} изменил решение: ${a.state}.`,a.name)}const p=a.root.position,target=a.target,d=dist2(p,target);if(a.state==='resting'){a.body.rotation.z=Math.sin(now*.001+a.phase)*.025;a.needs.energy=clamp(a.needs.energy-dt*.012);a.needs.thirst=clamp(a.needs.thirst-dt*.001)}else if(d>.7&&running){const dir=new THREE.Vector3(target.x-p.x,0,target.z-p.z).normalize();const speed=a.state==='observing another mind'?.55:.72;const nextX=p.x+dir.x*dt*speed,nextZ=p.z+dir.z*dt*speed;if(isWalkable(nextX,nextZ)){p.addScaledVector(dir,dt*speed);a.root.rotation.y=Math.atan2(dir.x,dir.z)}
 else {const safe=chooseSafeSpawn(p.x,p.z);a.target.set(safe.x,0,safe.z);chooseLandTarget(a,a.state==='seeking water'?'water':'explore')}a.needs.energy=clamp(a.needs.energy+dt*.0018);a.needs.thirst=clamp(a.needs.thirst+dt*.0012);a.metrics.exploration=clamp(a.metrics.exploration+dt*.00012)}else if(running){if(a.state==='seeking water'){a.needs.thirst=clamp(a.needs.thirst-dt*.025);a.metrics.survival=clamp(a.metrics.survival+.0007);a.brain.learn('достиг воды')}if(a.state==='exploring'){a.needs.curiosity=clamp(a.needs.curiosity-dt*.02);a.brain.learn('обнаружено новое место')}if(a.state==='observing another mind'){a.needs.social=clamp(a.needs.social-dt*.018);a.metrics.social=clamp(a.metrics.social+.0008);a.brain.learn('замечен другой разум')}a.stateUntil=now+rand(2500,6000)}const bob=Math.sin(now*.0024+a.phase)*.035;a.root.position.y=bob;a.core.scale.setScalar(1+Math.sin(now*.004+a.phase)*.08);a.ring.rotation.z+=dt*.35;projectLabel(a)});const d=dist2(agents[0].root.position,agents[1].root.position);if(d<7&&Math.random()<dt*.08){addEvent('OpenAI и Cloude находятся рядом — наблюдение без вмешательства.');agents[0].needs.social=clamp(agents[0].needs.social+.15);agents[1].needs.social=clamp(agents[1].needs.social+.15)}}
-function projectLabel(a){const v=a.root.position.clone();v.y=2.9;v.project(camera);const x=(v.x*.5+.5)*innerWidth,y=(-v.y*.5+.5)*innerHeight;a.label.style.transform=`translate(${x}px,${y}px) translate(-50%,-100%)`;a.label.style.opacity=(v.z>1||Math.abs(v.x)>1)?'0':'1';const state=a.label.querySelector('.agent-state-tag');if(state)state.textContent=({resting:'отдыхает','seeking water':'ищет воду','observing another mind':'наблюдает','exploring':'исследует',wandering:'бродит',observing:'наблюдает'})[a.state]||a.state}
+
+/* ---------- AI dialogue presentation + voice bridge ---------- */
+const dialogueLayer=$('#dialogue-layer');
+const speechBubbles=new Map();
+let availableVoices=[];
+function refreshVoices(){availableVoices='speechSynthesis' in window?speechSynthesis.getVoices():[]}
+refreshVoices();
+if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged',refreshVoices);
+function showSpeech(agent,text,duration=6500){
+  if(!text||!dialogueLayer)return;
+  let bubble=speechBubbles.get(agent.name);
+  if(!bubble){bubble=document.createElement('div');bubble.className='dialogue-bubble';bubble.dataset.agent=agent.name;bubble.innerHTML='<span class="dialogue-speaker"></span><span class="dialogue-text"></span>';dialogueLayer.appendChild(bubble);speechBubbles.set(agent.name,bubble)}
+  bubble.style.setProperty('--agent-color',`#${agent.color.toString(16).padStart(6,'0')}`);
+  bubble.querySelector('.dialogue-speaker').textContent=agent.name.toUpperCase();
+  bubble.querySelector('.dialogue-text').textContent=String(text).trim();
+  bubble.classList.add('show');
+  clearTimeout(bubble._hideTimer);
+  bubble._hideTimer=setTimeout(()=>bubble.classList.remove('show'),Math.max(1200,duration));
+}
+function pickVoice(agent){
+  if(!availableVoices.length)return null;
+  const ru=availableVoices.filter(v=>/^ru(-|_)/i.test(v.lang));
+  const pool=ru.length>=2?ru:availableVoices;
+  const idx=agent.name==='Cloude'?1:0;
+  return pool[idx%pool.length]||null;
+}
+function speakAgent(agent,text){
+  showSpeech(agent,text);
+  if(!('speechSynthesis' in window))return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(String(text));
+  u.lang='ru-RU';
+  u.voice=pickVoice(agent);
+  u.rate=agent.name==='Cloude'?.96:1.02;
+  u.pitch=agent.name==='Cloude'?.88:1.08;
+  u.volume=.92;
+  speechSynthesis.speak(u);
+}
+function receiveDialogue({speaker,text}){const agent=agents.find(a=>a.name===speaker);if(!agent)return;speakAgent(agent,text)}
+window.addEventListener('ai-life:dialogue',e=>receiveDialogue(e.detail||{}));
+function projectLabel(a){const v=a.root.position.clone();v.y=2.9;v.project(camera);const x=(v.x*.5+.5)*innerWidth,y=(-v.y*.5+.5)*innerHeight;a.label.style.transform=`translate(${x}px,${y}px) translate(-50%,-100%)`;const bubble=speechBubbles.get(a.name);if(bubble){bubble.style.transform=`translate(${x}px,${y-4}px) translate(-50%,-100%)`;bubble.style.opacity=(v.z>1||Math.abs(v.x)>1)?'0':''}a.label.style.opacity=(v.z>1||Math.abs(v.x)>1)?'0':'1';const state=a.label.querySelector('.agent-state-tag');if(state)state.textContent=({resting:'отдыхает','seeking water':'ищет воду','observing another mind':'наблюдает','exploring':'исследует',wandering:'бродит',observing:'наблюдает'})[a.state]||a.state}
 
 let last=performance.now(),saveTimer=0;
 function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const world=applySolarLighting(new Date());if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateCamera(dt);$('#clock').textContent=new Date().toLocaleTimeString('ru-RU',{hour12:false});updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
 addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
-renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save};
+renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue};
 requestAnimationFrame(tick);
