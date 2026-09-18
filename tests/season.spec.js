@@ -9,7 +9,6 @@ test('real calendar drives autumn visuals in September', async ({ page }) => {
     const summer = api.seasonInfo(new Date('2026-07-18T12:00:00Z'));
     api.applySeason(new Date('2026-09-18T12:00:00Z'));
     const autumnColors = api.seasonPalettes.autumn;
-    api.applySeason(new Date('2026-07-18T12:00:00Z'));
     const summerColors = api.seasonPalettes.summer;
     return {
       autumn: autumn.key,
