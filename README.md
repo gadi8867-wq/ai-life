@@ -277,3 +277,22 @@ AI Life должен превратиться из браузерного про
 **Текущий статус: Prototype / Alpha vs Beta UI + local simulation.**
 
 Реальные OpenAI/Claude API, полноценный backend, надёжное многомесячное persistent-хранилище и production-ready 24/7 runtime являются следующими этапами разработки.
+
+## AI Life 2.0 — AI Brain MVP
+
+The prototype now has two independent model-backed minds:
+- **OpenAI** → OpenAI Responses API
+- **Cloude** → Anthropic Messages API
+
+The browser remains an observer. The server is only a secure proxy so API keys never enter the browser. Each brain receives its own observation plus the recent conversation and chooses whether to speak and how to move. There is no scripted greeting or predefined personality.
+
+### Run locally
+
+1. Copy `.env.example` to `.env` and add `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`.
+2. Install dependencies: `npm install`
+3. Start: `npm start`
+4. Open `http://localhost:4173`
+
+Speech uses the browser's Russian speech synthesis with different voice/pitch settings for OpenAI and Cloude. Voice availability depends on the device/browser.
+
+Do not commit API keys.
