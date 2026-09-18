@@ -97,8 +97,29 @@ for(let i=0;i<145;i++){let x=rand(-55,55),z=rand(-55,55);if(Math.abs(x-5)<7)x+=x
 
 const fire=new THREE.Group();fire.position.set(-11,0,9);scene.add(fire);
 for(let i=0;i<5;i++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,2,7),mat.trunk);l.position.y=.22;l.rotation.z=Math.PI/2;l.rotation.y=i*.65;l.rotation.x=.18;l.castShadow=true;fire.add(l)}
-const flame=new THREE.Mesh(new THREE.IcosahedronGeometry(.72,1),mat.ember);flame.position.y=1.05;fire.add(flame);
+const flameMat=new THREE.MeshBasicMaterial({color:0xff9b3d,transparent:true,opacity:.92});
+const flame=new THREE.Mesh(new THREE.IcosahedronGeometry(.72,1),flameMat);flame.position.y=1.05;fire.add(flame);
+const flameInnerMat=new THREE.MeshBasicMaterial({color:0xffe0a3,transparent:true,opacity:.78});
+const flameInner=new THREE.Mesh(new THREE.IcosahedronGeometry(.43,1),flameInnerMat);flameInner.position.set(.08,1.12,.06);fire.add(flameInner);
 const fireLight=new THREE.PointLight(0xff9a4c,4.2,13,2);fireLight.position.y=1.4;fire.add(fireLight);
+const fireEmbers=[];
+for(let i=0;i<9;i++){const e=new THREE.Mesh(new THREE.SphereGeometry(.045,6,5),new THREE.MeshBasicMaterial({color:0xffc15a,transparent:true,opacity:.9}));e.position.set(rand(-.45,.45),rand(.35,1.15),rand(-.45,.45));e.userData.phase=Math.random()*Math.PI*2;e.userData.speed=rand(.45,1.15);fire.add(e);fireEmbers.push(e)}
+function updateFire(dt,now,world){
+  const season=world.season.key;
+  const night=world.night;
+  const seasonalBoost=season==='autumn'?.16:season==='winter'?.28:season==='spring'?.06:0;
+  const pulse=.94+Math.sin(now*.010)*.08+Math.sin(now*.017+1.7)*.05;
+  flame.scale.set(1+pulse*.09+seasonalBoost,1+pulse*.16+seasonalBoost,1+pulse*.09+seasonalBoost);
+  flame.rotation.y+=dt*(.8+seasonalBoost);
+  flameInner.scale.set(1+pulse*.05,1+pulse*.11,1+pulse*.05);
+  flameInner.rotation.y-=dt*1.1;
+  fireLight.intensity=lerp(2.7,5.6,night)*pulse;
+  fireLight.distance=lerp(10.5,15,night);
+  fireLight.color.setHSL(season==='autumn'?.075:.065,.86,.59);
+  flameMat.color.setHSL(season==='autumn'?.075:.065,.94,.59);
+  flameInnerMat.color.setHSL(season==='winter'?.11:.12,.58,.78);
+  fireEmbers.forEach((e,i)=>{e.position.y+=dt*e.userData.speed; e.position.x+=Math.sin(now*.002+i)*dt*.08; e.position.z+=Math.cos(now*.0024+i)*dt*.06; e.material.opacity=.45+.45*night; if(e.position.y>1.65){e.position.set(rand(-.45,.45),rand(.35,.7),rand(-.45,.45))}});
+}
 
 const worldResources=new THREE.Group();scene.add(worldResources);
 const worldItems=[];
