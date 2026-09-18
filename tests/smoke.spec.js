@@ -73,3 +73,24 @@ test('invalid saved positions migrate to the nearest safe land point', async ({ 
   expect(Math.hypot(result[0].x - 5, result[0].z - 0)).toBeLessThan(20);
   expect(Math.hypot(result[1].x - 5, result[1].z - 20)).toBeLessThan(15);
 });
+
+
+test('river has two banks and a traversable bridge', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.bridge?.name === 'river-bridge');
+  const result = await page.evaluate(() => {
+    const api = window.__AI_LIFE_TEST__;
+    return {
+      bridgeName: api.bridge.name,
+      bridgeWalkable: api.isWalkable(5, 0),
+      riverWalkableAwayFromBridge: api.isWalkable(5, 10),
+      openAiX: api.agents.find(a => a.name === 'OpenAI').root.position.x,
+      cloudeX: api.agents.find(a => a.name === 'Cloude').root.position.x
+    };
+  });
+  expect(result.bridgeName).toBe('river-bridge');
+  expect(result.bridgeWalkable).toBeTruthy();
+  expect(result.riverWalkableAwayFromBridge).toBeFalsy();
+  expect(result.openAiX).toBeLessThan(0);
+  expect(result.cloudeX).toBeGreaterThan(0);
+});
