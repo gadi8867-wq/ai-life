@@ -9,6 +9,7 @@
 </head>
 <body>
 <div id="game"></div>
+<div id="dialogue-layer" aria-live="polite" aria-label="Реплики персонажей"></div>
 <div id="orientation" class="orientation">
   <div class="orientation-card">
     <div class="orientation-mark">AI LIFE</div>
@@ -21,44 +22,46 @@
   <div class="subjects"><span class="subject openai-dot"></span>OpenAI <b>·</b> <span class="subject cloude-dot"></span>Cloude</div>
   <div class="clock" id="clock">--:--:--</div>
 </header>
-
 <section class="scene-status" aria-live="polite">
   <div class="status-line"><span class="status-dot"></span><span id="worldStatus">Наблюдение за миром</span></div>
   <div class="status-detail" id="statusDetail">Система не вмешивается в решения агентов.</div>
 </section>
-
 <aside class="observatory" id="observatory" aria-hidden="true">
   <button class="panel-close" id="closePanel" aria-label="Закрыть">×</button>
-  <div class="panel-kicker">AI OBSERVATORY</div>
-  <div class="panel-title">Наблюдение</div>
+  <div class="panel-kicker">НАБЛЮДЕНИЕ</div>
+  <div class="panel-title">Состояние двух автономных разумов</div>
   <div id="stats"></div>
   <div class="events-head"><span>События</span><span id="eventCount">0</span></div>
   <div id="events" class="events"></div>
 </aside>
-
-<div class="control-dock" id="controlDock" aria-hidden="true">
-  <button id="start" title="Запустить">▶</button>
-  <button id="pause" title="Пауза">Ⅱ</button>
-  <button id="followA" title="Следить за OpenAI">O</button>
-  <button id="followB" title="Следить за Cloude">C</button>
-  <button id="free" title="Свободная камера">◌</button>
-  <button id="auto" title="Автокамера">✦</button>
-</div>
-
+<button class="start-button" id="start" type="button" aria-label="Запустить или остановить эксперимент"><span class="start-icon">▶</span><span class="start-text">СТАРТ</span></button>
 <button class="orb control-orb" id="controlOrb" aria-label="Управление камерой"><span>⌘</span></button>
-<button class="orb brain-orb" id="brainOrb" aria-label="Открыть наблюдение"><span>◉</span></button>
-
-<div class="scene-events" id="sceneEvents" aria-live="polite" aria-label="Последние события"></div>
-
+<button class="orb brain-orb" id="brainOrb" aria-label="Открыть наблюдение"><span>◉</span></button><section class="voice-settings" id="voiceSettings" aria-label="Настройки голосов" aria-hidden="true">
+  <button class="panel-close" id="closeVoiceSettings" aria-label="Закрыть">×</button>
+  <div class="panel-kicker">ГОЛОСА</div>
+  <div class="panel-title">Голоса OpenAI и Cloude</div>
+  <p class="voice-help">Выбери голос отдельно для каждого разума и сразу проверь звучание.</p>
+  <div class="voice-agent" data-agent="OpenAI">
+    <div class="voice-agent-head"><span class="voice-agent-name openai-text">OpenAI</span><span class="voice-status" id="openaiVoiceStatus">по умолчанию</span></div>
+    <label>Голос OpenAI<select id="openaiVoice"></select></label>
+    <button type="button" class="voice-test" data-agent="OpenAI">▶ Проверить голос</button>
+  </div>
+  <div class="voice-agent" data-agent="Cloude">
+    <div class="voice-agent-head"><span class="voice-agent-name cloude-text">Cloude</span><span class="voice-status" id="cloudeVoiceStatus">по умолчанию</span></div>
+    <label>Голос Cloude<select id="cloudeVoice"></select></label>
+    <button type="button" class="voice-test" data-agent="Cloude">▶ Проверить голос</button>
+  </div>
+  <div class="voice-note" id="voiceNote" aria-live="polite">Голоса берутся из доступных голосов браузера.</div>
+</section>
+<button class="orb voice-orb" id="voiceOrb" aria-label="Настройки голосов"><span>♫</span></button>
 <div class="experiment-pill">
   <span class="pill-icon">✦</span>
-  <span><b>EXPERIMENT</b><small id="pillDay">DAY 001</small></span>
+  <span><b>ЭКСПЕРИМЕНТ</b><small id="pillDay">ДЕНЬ 001</small></span>
   <span class="pill-divider"></span>
-  <span id="pillStart">START —</span>
+  <span id="pillStart">СТАРТ —</span>
   <span class="pill-divider"></span>
-  <span>INTERVENTION <b>0</b></span>
+  <span>ВМЕШАТЕЛЬСТВО <b>0</b></span>
 </div>
-
 <script type="module" src="./js/main.js"></script>
 </body>
 </html>
