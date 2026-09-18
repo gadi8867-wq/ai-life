@@ -91,7 +91,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&req.url.startsWith('/api/donations/events')){const u=new URL(req.url,'http://127.0.0.1');const after=Number(u.searchParams.get('after')||0);return json(res,200,{ok:true,events:donationEvents.filter(x=>x.id>after)})}
     if(req.method==='POST'&&req.url==='/api/donations/test'){if(mode!=='test')return json(res,403,{error:'test donations disabled'});const b=await body(req);return json(res,200,{ok:true,event:pushDonation(b)})}
     if(req.method==='GET'){
-      const p=path.join(root,req.url==='/'?'index.html':req.url.replace(/^\\//,''));
+      const p=path.join(root,req.url==='/'?'index.html':req.url.replace(/^\//,''));
       if(!p.startsWith(root)||!fs.existsSync(p)||fs.statSync(p).isDirectory())return json(res,404,{error:'not found'});
       const ext=path.extname(p);const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};res.writeHead(200,{'content-type':types[ext]||'application/octet-stream'});return fs.createReadStream(p).pipe(res);
     }
