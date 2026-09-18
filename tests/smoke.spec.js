@@ -13,9 +13,12 @@ test('AI Life 16:9 scene keeps agents and three events visible', async ({ page }
   await expect(events).toHaveCount(3);
   for (let i = 0; i < 3; i++) await expect(events.nth(i)).toBeVisible();
 
-  const box = async (selector) => page.locator(selector).boundingBox();
-  const feed = await box('#sceneEvents');
-  const panel = await box('.experiment-pill');
+  const rect = async (selector) => page.locator(selector).evaluate(el => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
+  });
+  const feed = await rect('#sceneEvents');
+  const panel = await rect('.experiment-pill');
   expect(feed).not.toBeNull();
   expect(panel).not.toBeNull();
 
