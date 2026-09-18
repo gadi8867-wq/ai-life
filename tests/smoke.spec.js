@@ -28,7 +28,12 @@ test('AI Life 16:9 scene keeps agents and three events visible', async ({ page }
   );
   expect(labels.every(x => x.opacity !== '0')).toBeTruthy();
 
-  await expect(page.locator('#game canvas')).toHaveAttribute('width', /./);
+  const canvasSize = await page.locator('#game canvas').evaluate(canvas => ({
+    width: canvas.width,
+    height: canvas.height
+  }));
+  expect(canvasSize.width).toBeGreaterThan(0);
+  expect(canvasSize.height).toBeGreaterThan(0);
 });
 
 test('agents stay on land and wandering changes coordinates', async ({ page }) => {
