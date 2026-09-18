@@ -94,3 +94,39 @@ test('river has two banks and a traversable bridge', async ({ page }) => {
   expect(result.openAiX).toBeLessThan(0);
   expect(result.cloudeX).toBeGreaterThan(0);
 });
+
+
+test('autumn calendar changes smoothly week to week', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.autumnClimate);
+  const result = await page.evaluate(() => {
+    const api = window.__AI_LIFE_TEST__;
+    const dates = [
+      new Date(Date.UTC(2026, 8, 7)),
+      new Date(Date.UTC(2026, 8, 14)),
+      new Date(Date.UTC(2026, 8, 21)),
+      new Date(Date.UTC(2026, 8, 28)),
+      new Date(Date.UTC(2026, 9, 5)),
+      new Date(Date.UTC(2026, 9, 12))
+    ];
+    const climate = dates.map(d => ({ p: api.autumnProgress(d), ...api.autumnClimate(d) }));
+    api.applySeason(dates[0]);
+    const early = api.leafBed.material.opacity;
+    api.applySeason(dates[dates.length - 1]);
+    const later = api.leafBed.material.opacity;
+    return { climate, early, later };
+  });
+  expect(result.climate[0].p).toBeLessThan(result.climate[1].p);
+  expect(result.climate[1].p).toBeLessThan(result.climate[2].p);
+  expect(result.climate[2].p).toBeLessThan(result.climate[3].p);
+  expect(result.climate[3].p).toBeLessThan(result.climate[4].p);
+  expect(result.climate[4].p).toBeLessThan(result.climate[5].p);
+  for (let i = 1; i < result.climate.length; i++) {
+    expect(Math.abs(result.climate[i].temperature - result.climate[i - 1].temperature)).toBeLessThan(4);
+  }
+  expect(result.climate[0].rainTarget).toBeGreaterThanOrEqual(0);
+  expect(result.climate[0].rainTarget).toBeLessThanOrEqual(1);
+  expect(result.climate[5].rainTarget).toBeGreaterThanOrEqual(0);
+  expect(result.climate[5].rainTarget).toBeLessThanOrEqual(1);
+  expect(result.later).toBeGreaterThan(result.early);
+});
