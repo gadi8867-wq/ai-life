@@ -149,7 +149,7 @@ async function status(){try{const r=await fetch('/api/status');const s=await r.j
 
 addEvent('OpenAI и Cloude видят друг друга. Человек только наблюдает.');
 addEvent('Каждый мозг сам решает, говорить ли, приближаться или отойти.');
-renderLabels(); status(); speechSynthesis?.getVoices?.(); window.speechSynthesis?.addEventListener?.('voiceschanged',()=>{});
+renderLabels(); status(); window.speechSynthesis?.getVoices?.(); window.speechSynthesis?.addEventListener?.('voiceschanged',()=>{});
 window.addEventListener('resize',resize); resize();
 if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,observation,showSpeech,conversation};
 let last=performance.now();
