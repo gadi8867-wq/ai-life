@@ -136,7 +136,7 @@ const speechBubbles=new Map();
 let availableVoices=[];
 function refreshVoices(){availableVoices='speechSynthesis' in window?speechSynthesis.getVoices():[]}
 refreshVoices();
-if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged',()=>{refreshVoices();populateVoiceSelects?.()});
+if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged',refreshVoices);
 function showSpeech(agent,text,duration=6500){
   if(!text||!dialogueLayer)return;
   let bubble=speechBubbles.get(agent.name);
