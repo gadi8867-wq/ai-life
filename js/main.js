@@ -273,7 +273,7 @@ function populateVoiceSelects(){
 }
 function selectedVoice(agent){
   const select=voiceSelects()[agent];
-  const pool=availableVoices.filter(v=>/^ru(-|_)/i.test(v.lang);
+  const pool=availableVoices.filter(v=>/^ru(-|_)/i.test(v.lang));
   const list=pool.length?pool:availableVoices;
   const v=list[Number(select?.value)||0];
   voicePrefs[agent]=v?.name||null;
