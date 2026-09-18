@@ -146,3 +146,12 @@ test('season and compact pause control are synchronized to Nuremberg', async ({ 
   expect(result.pillHasButton).toBeTruthy();
   expect(result.buttonPosition).toBe('relative');
 });
+
+
+test('world contains cave shelters', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.caves?.name === 'caves');
+  const result = await page.evaluate(() => ({ name: window.__AI_LIFE_TEST__.caves.name, children: window.__AI_LIFE_TEST__.caves.children.length }));
+  expect(result.name).toBe('caves');
+  expect(result.children).toBeGreaterThanOrEqual(3);
+});
