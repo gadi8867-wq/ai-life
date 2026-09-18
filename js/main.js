@@ -48,7 +48,43 @@ const flame=new THREE.Mesh(new THREE.IcosahedronGeometry(.72,1),mat.ember);flame
 const fireLight=new THREE.PointLight(0xff9a4c,4.2,13,2);fireLight.position.y=1.4;fire.add(fireLight);
 
 const agentColors={OpenAI:0x63c9e8,Cloude:0xe7a45e},agents=[];
-function makeAgent(name,color,x,z){const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);const glow=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.12,side:THREE.BackSide});const shell=new THREE.MeshStandardMaterial({color:0xc5d4d1,metalness:.45,roughness:.32});const dark=new THREE.MeshStandardMaterial({color:0x182126,metalness:.25,roughness:.5});const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.85,5,12),shell);body.position.y=1.05;body.castShadow=true;root.add(body);const core=new THREE.Mesh(new THREE.SphereGeometry(.24,16,12),new THREE.MeshBasicMaterial({color}));core.position.set(0,1.2,.48);root.add(core);const halo=new THREE.Mesh(new THREE.SphereGeometry(1.05,20,16),glow);halo.position.y=1.1;root.add(halo);const eye=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),dark);eye.position.set(0,1.47,.48);root.add(eye);const footL=new THREE.Mesh(new THREE.SphereGeometry(.24,12,8),dark);footL.scale.y=.55;footL.position.set(-.23,.33,0);root.add(footL);const footR=footL.clone();footR.position.x=.23;root.add(footR);const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.018,8,48),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.38}));ring.rotation.x=Math.PI/2;ring.position.y=.03;root.add(ring);const label=document.createElement('div');label.className='agent-label';label.innerHTML=`<span class="agent-name-tag">${name}</span><span class="agent-state-tag">наблюдает</span>`;label.style.setProperty('--agent-color',`#${color.toString(16).padStart(6,'0')}`);document.body.appendChild(label);return{name,color,root,body,core,halo,ring,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05},brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:''}}
+
+/* ---------- Dialogue presentation / voice layer ----------
+ * The AI Brain supplies the text; this layer only renders and speaks it.
+ * No dialogue text is generated here, so real model output can plug in directly.
+ */
+const speechState={voices:[],timers:new Map(),lastText:new Map()};
+function refreshVoices(){speechState.voices=window.speechSynthesis?.getVoices?.()||[]}
+if("speechSynthesis" in window){refreshVoices();window.speechSynthesis.addEventListener("voiceschanged",refreshVoices)}
+function voiceFor(name){
+  const voices=speechState.voices;
+  const ru=voices.filter(v=>/^ru(-|_)/i.test(v.lang));
+  const preferred=name==='OpenAI' ? [/Google русский/i,/Microsoft Irina/i,/Milena/i,/Anna/i] : [/Microsoft Pavel/i,/Google русский/i,/Yuri/i,/Maxim/i];
+  for(const re of preferred){const hit=voices.find(v=>re.test(v.name)&&/^ru/i.test(v.lang));if(hit)return hit}
+  if(ru.length)return ru[name==='OpenAI'?0:Math.min(1,ru.length-1)];
+  return voices.find(v=>/^en(-|_)/i.test(v.lang))||voices[0]||null;
+}
+function showSpeech(agent,text,duration=6500){
+  const clean=String(text??"").trim();if(!clean)return;
+  const bubble=agent.label.querySelector(".speech-bubble");if(!bubble)return;
+  const timer=speechState.timers.get(agent.name);if(timer)clearTimeout(timer);
+  bubble.textContent=clean;bubble.classList.add("visible");speechState.lastText.set(agent.name,clean);
+  speechState.timers.set(agent.name,setTimeout(()=>{bubble.classList.remove("visible");speechState.timers.delete(agent.name)},Math.max(1200,duration)));
+}
+function speakAgent(agent,text){
+  const clean=String(text??"").trim();if(!clean||!("speechSynthesis" in window))return false;
+  window.speechSynthesis.cancel();
+  const utterance=new SpeechSynthesisUtterance(clean);utterance.lang="ru-RU";
+  utterance.rate=agent.name==="OpenAI"?.98:.92;utterance.pitch=agent.name==="OpenAI"?1.05:.86;
+  const voice=voiceFor(agent.name);if(voice)utterance.voice=voice;
+  window.speechSynthesis.speak(utterance);return true;
+}
+function presentDialogue(agent,text,{duration=6500,speak=true}={}){
+  const clean=String(text??"").trim();if(!clean)return false;
+  showSpeech(agent,clean,duration);if(speak)speakAgent(agent,clean);
+  addEvent(agent.name+": «"+clean+"»",agent.name);return true;
+}
+function makeAgent(name,color,x,z){const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);const glow=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.12,side:THREE.BackSide});const shell=new THREE.MeshStandardMaterial({color:0xc5d4d1,metalness:.45,roughness:.32});const dark=new THREE.MeshStandardMaterial({color:0x182126,metalness:.25,roughness:.5});const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.85,5,12),shell);body.position.y=1.05;body.castShadow=true;root.add(body);const core=new THREE.Mesh(new THREE.SphereGeometry(.24,16,12),new THREE.MeshBasicMaterial({color}));core.position.set(0,1.2,.48);root.add(core);const halo=new THREE.Mesh(new THREE.SphereGeometry(1.05,20,16),glow);halo.position.y=1.1;root.add(halo);const eye=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),dark);eye.position.set(0,1.47,.48);root.add(eye);const footL=new THREE.Mesh(new THREE.SphereGeometry(.24,12,8),dark);footL.scale.y=.55;footL.position.set(-.23,.33,0);root.add(footL);const footR=footL.clone();footR.position.x=.23;root.add(footR);const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.018,8,48),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.38}));ring.rotation.x=Math.PI/2;ring.position.y=.03;root.add(ring);const label=document.createElement('div');label.className='agent-label';label.innerHTML=`<div class="speech-bubble" aria-live="polite"></div><span class="agent-name-tag">${name}</span><span class="agent-state-tag">наблюдает</span>`;label.style.setProperty('--agent-color',`#${color.toString(16).padStart(6,'0')}`);document.body.appendChild(label);return{name,color,root,body,core,halo,ring,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05},brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:''}}
 agents.push(makeAgent('OpenAI',agentColors.OpenAI,-15,-4));agents.push(makeAgent('Cloude',agentColors.Cloude,17,12));
 
 class AgentBrain{constructor(agent){this.agent=agent;this.lastThought='наблюдает'}observe(world){const a=this.agent,o=agents.find(x=>x!==a),d=o?dist2(a.root.position,o.root.position):999;return{self:{x:a.root.position.x,z:a.root.position.z},daylight:world.daylight,distanceToOther:d,state:a.state,needs:{...a.needs},recentMemory:a.memory.slice(-4)}}decide(world,now){const a=this.agent,o=agents.find(x=>x!==a),d=o?dist2(a.root.position,o.root.position):999;const choices=[{w:a.needs.thirst*1.9,action:'water'},{w:a.needs.energy*1.4,action:'rest'},{w:a.needs.curiosity*daylightFactor(world.daylight)*1.5,action:'explore'},{w:(d<10?.65:.06)*a.needs.social,action:'social'},{w:.25+Math.random()*.2,action:'wander'}];choices.sort((x,y)=>y.w-x.w);const top=choices[0];this.lastThought=top.action;a.state=top.action==='water'?'seeking water':top.action==='rest'?'resting':top.action==='social'?'observing another mind':top.action==='explore'?'exploring':'wandering';a.stateUntil=now+rand(5000,11000);if(top.action==='water')chooseLandTarget(a,'water');else if(top.action==='rest')a.target.copy(a.root.position);else if(top.action==='social'&&o){a.target.copy(o.root.position);if(!isWalkable(a.target.x,a.target.z))a.target.x+=a.target.x<5?9:-9}else chooseLandTarget(a,top.action);a.metrics.autonomy=clamp(a.metrics.autonomy+.003);a.metrics.decision=clamp(a.metrics.decision+(top.w>.55?.002:-.0003))}learn(result){const a=this.agent;a.memory.push({time:Date.now(),state:a.state,result});if(a.memory.length>40)a.memory.shift();a.metrics.learning=clamp(a.metrics.learning+.006);a.metrics.exploration=clamp(a.metrics.exploration+.0015)}}
@@ -133,5 +169,5 @@ let last=performance.now(),saveTimer=0;
 function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const world=applySolarLighting(new Date());if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateCamera(dt);$('#clock').textContent=new Date().toLocaleTimeString('ru-RU',{hour12:false});updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
 addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
-renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save};
+renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,presentDialogue,voiceFor};
 requestAnimationFrame(tick);

@@ -73,3 +73,23 @@ test('invalid saved positions migrate to the nearest safe land point', async ({ 
   expect(Math.hypot(result[0].x - 5, result[0].z - 0)).toBeLessThan(20);
   expect(Math.hypot(result[1].x - 5, result[1].z - 20)).toBeLessThan(15);
 });
+
+
+test('dialogue presentation renders a bubble and selects distinct voice settings', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.agents?.length === 2);
+  const result = await page.evaluate(() => {
+    const api = window.__AI_LIFE_TEST__;
+    const [openai, cloude] = api.agents;
+    api.presentDialogue(openai, 'Привет. Я тебя вижу.', { speak: false, duration: 1500 });
+    api.presentDialogue(cloude, 'Я тоже тебя вижу.', { speak: false, duration: 1500 });
+    return {
+      bubbles: api.agents.map(a => a.label.querySelector('.speech-bubble')?.textContent),
+      visible: api.agents.map(a => a.label.querySelector('.speech-bubble')?.classList.contains('visible')),
+      settings: api.agents.map(a => ({ rate: a.name === 'OpenAI' ? .98 : .92, pitch: a.name === 'OpenAI' ? 1.05 : .86 }))
+    };
+  });
+  expect(result.bubbles).toEqual(['Привет. Я тебя вижу.', 'Я тоже тебя вижу.']);
+  expect(result.visible).toEqual([true, true]);
+  expect(result.settings[0]).not.toEqual(result.settings[1]);
+});
