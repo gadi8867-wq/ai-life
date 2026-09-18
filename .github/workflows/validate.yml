@@ -23,11 +23,10 @@ jobs:
         run: node --check js/main.js
       - name: Test autonomous backend in test mode
         run: |
-          AI_LIFE_MODE=test node --trace-uncaught server/index.js > /tmp/ai-life-backend.log 2>&1 &
+          AI_LIFE_MODE=test node server/index.js > /tmp/ai-life-backend.log 2>&1 &
           PID=$!
           trap "kill $PID" EXIT
           for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8787/api/health >/dev/null && break; sleep 0.25; done
-          cat /tmp/ai-life-backend.log
           AI_LIFE_MODE=test node server/test.js
 
       - name: Ensure index is only the HTML shell
