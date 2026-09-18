@@ -73,3 +73,16 @@ test('invalid saved positions migrate to the nearest safe land point', async ({ 
   expect(Math.hypot(result[0].x - 5, result[0].z - 0)).toBeLessThan(20);
   expect(Math.hypot(result[1].x - 5, result[1].z - 20)).toBeLessThan(15);
 });
+
+test('AI brain server is connected and speech bubbles render', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#brainStatus')).toBeVisible();
+  const status = await page.evaluate(() => fetch('/api/status').then(r => r.json()));
+  expect(status.ok).toBeTruthy();
+
+  await page.evaluate(() => {
+    const api = window.__AI_LIFE_TEST__;
+    api.showSpeech(api.agents[0], 'Привет. Я вижу тебя.');
+  });
+  await expect(page.locator('.speech-bubble.openai')).toHaveText('Привет. Я вижу тебя.');
+});
