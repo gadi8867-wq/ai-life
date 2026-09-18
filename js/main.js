@@ -75,6 +75,7 @@ function showSpeech(a,text){
   const el=document.createElement('div'); el.className='speech-bubble '+a.name.toLowerCase();
   el.textContent=text; $('#speechLayer').appendChild(el);
   a.speech=el;
+  projectSpeech(a);
   speak(a,text);
   setTimeout(()=>{if(el.isConnected)el.remove()},7000);
 }
