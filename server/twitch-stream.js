@@ -67,18 +67,29 @@ ffmpeg.on('exit',(code,signal)=>{
   stop(code&&code>0?1:0);
 });
 
-process.on('SIGINT',()=>stop(0));
-process.on('SIGTERM',()=>stop(0));
-
-const interval=setInterval(async()=>{
-  if(stopped)return;
+const cdp=await page.context().newCDPSession(page);
+let frameBusy=false;
+cdp.on('Page.screencastFrame',async event=>{
   try{
-    const frame=await page.screenshot({type:'jpeg',quality:78});
+    if(frameBusy||stopped){await cdp.send('Page.screencastFrameAck',{sessionId:event.sessionId});return;}
+    frameBusy=true;
+    const frame=Buffer.from(event.data,'base64');
     if(!ffmpeg.stdin.destroyed)ffmpeg.stdin.write(frame);
   }catch(error){
     console.error('stream frame error:',error.message);
+  }finally{
+    frameBusy=false;
+    try{await cdp.send('Page.screencastFrameAck',{sessionId:event.sessionId})}catch{}
   }
-},Math.round(1000/fps));
+});
 
+await cdp.send('Page.startScreencast',{
+  format:'jpeg',
+  quality:78,
+  maxWidth:width,
+  maxHeight:height,
+  everyNthFrame:1
+});
+
+console.log(`AI Life Twitch stream started: ${width}x${height} @ ${fps}fps`);
 await new Promise(()=>{});
-clearInterval(interval);
