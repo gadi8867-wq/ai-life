@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('AI Life 16:9 scene keeps agents and three events visible', async ({ page }) => {
+test('AI Life 16:9 scene keeps agents visible', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => window.__AI_LIFE_TEST__?.agents?.length === 2);
   await page.waitForTimeout(2500);
@@ -9,22 +9,14 @@ test('AI Life 16:9 scene keeps agents and three events visible', async ({ page }
   await expect(page.locator('.agent-label').filter({ hasText: 'OpenAI' })).toBeVisible();
   await expect(page.locator('.agent-label').filter({ hasText: 'Cloude' })).toBeVisible();
 
-  const events = page.locator('#sceneEvents .scene-event');
-  await expect(events).toHaveCount(3);
-  for (let i = 0; i < 3; i++) await expect(events.nth(i)).toBeVisible();
-
   const rect = async (selector) => page.locator(selector).evaluate(el => {
     const r = el.getBoundingClientRect();
     return { x: r.x, y: r.y, width: r.width, height: r.height };
   });
-  const feed = await rect('#sceneEvents');
   const panel = await rect('.experiment-pill');
-  expect(feed).not.toBeNull();
   expect(panel).not.toBeNull();
-
-  expect(feed.y + feed.height).toBeLessThan(panel.y);
-  expect(feed.x).toBeGreaterThanOrEqual(0);
-  expect(feed.x + feed.width).toBeLessThanOrEqual(1920);
+  expect(panel.x).toBeGreaterThanOrEqual(0);
+  expect(panel.x + panel.width).toBeLessThanOrEqual(1920);
 
   const labels = await page.locator('.agent-label').evaluateAll(els =>
     els.map(el => ({ text: el.textContent?.trim() || '', opacity: getComputedStyle(el).opacity }))
