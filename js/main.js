@@ -107,7 +107,7 @@ function applySolarLighting(date=new Date()){const s=solarPosition(date),e=s.ele
 const saved=(()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'null')}catch{return null}})();
 const experimentStart=saved?.experimentStart||Date.now();let running=saved?.running??true;let cameraMode='auto',selectedAgent=null,lastDecision=0,eventLog=saved?.events||[];
 if(saved?.agents)saved.agents.forEach(s=>{const a=agents.find(x=>x.name===s.name);if(!a)return;a.root.position.set(s.x,0,s.z);if(!isWalkable(a.root.position.x,a.root.position.z)){const safe=chooseSafeSpawn(a.root.position.x,a.root.position.z);a.root.position.set(safe.x,0,safe.z);a.target.copy(a.root.position)}a.metrics={...a.metrics,...s.metrics};a.memory=s.memory||[]});
-function addEvent(text,agent=null){const item={time:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),text,agent};eventLog=[item,...eventLog].slice(0,10);renderEvents();renderSceneEvents()}
+function addEvent(text,agent=null){const item={time:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),text,agent};eventLog=[item,...eventLog].slice(0,10);renderEvents()}
 function save(){const payload={experimentStart,running,events:eventLog,agents:agents.map(a=>({name:a.name,x:a.root.position.x,z:a.root.position.z,metrics:a.metrics,memory:a.memory.slice(-20)}))};try{localStorage.setItem(SAVE_KEY,JSON.stringify(payload))}catch{}}
 
 function renderEvents(){const el=$('#events');el.innerHTML='';eventLog.slice(0,7).forEach(e=>{const row=document.createElement('div');row.className='event';row.innerHTML=`<time>${e.time}</time>${e.text}`;el.appendChild(row)});$('#eventCount').textContent=eventLog.length}
