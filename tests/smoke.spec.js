@@ -130,3 +130,22 @@ test('autumn calendar changes smoothly week to week', async ({ page }) => {
   expect(result.climate[5].rainTarget).toBeLessThanOrEqual(1);
   expect(result.later).toBeGreaterThan(result.early);
 });
+
+
+test('September trees use a premium mixed green-to-amber canopy', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.trees?.length > 0);
+  const result = await page.evaluate(() => {
+    const api = window.__AI_LIFE_TEST__;
+    api.applySeason(new Date(Date.UTC(2026, 8, 18)));
+    const trees = api.trees.slice(0, 12).map(t => ({
+      clusters: t.foliage.length,
+      colors: t.foliage.map(m => '#' + m.material.color.getHexString())
+    }));
+    return { trees, season: api.seasonInfo(new Date(Date.UTC(2026, 8, 18))) };
+  });
+  expect(result.season.key).toBe('autumn');
+  expect(result.trees.every(t => t.clusters >= 3)).toBeTruthy();
+  const unique = new Set(result.trees.flatMap(t => t.colors));
+  expect(unique.size).toBeGreaterThan(4);
+});
