@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('AI Life 16:9 scene keeps agents visible', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ai-life-2-v1', JSON.stringify({experimentStart: Date.now(), running: true, events: [], agents: []})));
   await page.goto('/');
   await page.waitForFunction(() => window.__AI_LIFE_TEST__?.agents?.length === 2);
   await page.waitForTimeout(2500);

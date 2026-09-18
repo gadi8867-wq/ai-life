@@ -77,28 +77,57 @@ for(let i=0;i<34;i++){
   pebble.position.set(riverX+side*rand(6.65,7.8),rand(.12,.25),z);
   pebble.scale.y=rand(.45,.8);pebble.rotation.y=rand(0,Math.PI);pebble.castShadow=true;bankPebbles.add(pebble);
 }
-terrain.add(bankPebbles);
-
-/* ---------- Real calendar seasons ----------
- * The world follows the real calendar at the experiment location. September is autumn.
- * Trees, ground and atmosphere transition with the real date instead of a fixed preset.
+terrain.add(bankPebbles);/* ---------- Real calendar seasons ----------
+ * The world follows the real calendar at the experiment location.
+ * Autumn is a gradual transition: September stays green-orange, then the canopy
+ * becomes warmer and thinner through October/November. The agents are never told
+ * what to do; only the physical environment changes with the calendar.
  */
 const trees=[];
-function seasonInfo(date=new Date()){const m=date.getMonth();if(m>=2&&m<=4)return{name:'Весна',emoji:'🌱',key:'spring'};if(m>=5&&m<=7)return{name:'Лето',emoji:'☀️',key:'summer'};if(m>=8&&m<=10)return{name:'Осень',emoji:'🍂',key:'autumn'};return{name:'Зима',emoji:'❄️',key:'winter'}}
-const seasonPalettes={spring:{leafA:[.31,.58,.40],leafB:[.27,.52,.35],ground:[.30,.34,.24],grass:[.29,.48,.34],trunk:[.08,.32,.27]},summer:{leafA:[.34,.64,.36],leafB:[.29,.58,.32],ground:[.30,.37,.22],grass:[.31,.52,.34],trunk:[.08,.34,.27]},autumn:{leafA:[.23,.52,.40],leafB:[.10,.67,.46],ground:[.25,.34,.22],grass:[.22,.43,.30],trunk:[.07,.38,.24]},winter:{leafA:[.30,.20,.27],leafB:[.22,.16,.24],ground:[.30,.16,.23],grass:[.29,.22,.24],trunk:[.07,.28,.25]}};
+function dayOfYear(date=new Date()){
+  const start=new Date(date.getFullYear(),0,0);
+  return Math.floor((date-start)/86400000);
+}
+function seasonInfo(date=new Date()){
+  const m=date.getMonth(),d=dayOfYear(date);
+  if(m>=2&&m<=4)return{name:'Весна',emoji:'🌱',key:'spring',progress:clamp((d-60)/92)};
+  if(m>=5&&m<=7)return{name:'Лето',emoji:'☀️',key:'summer',progress:clamp((d-152)/92)};
+  if(m>=8&&m<=10)return{name:'Осень',emoji:'🍂',key:'autumn',progress:clamp((d-244)/91)};
+  return{name:'Зима',emoji:'❄️',key:'winter',progress:m===11?clamp((d-335)/31):clamp(d/59)};
+}
+const seasonPalettes={spring:{leafA:[.31,.56,.39],leafB:[.27,.60,.34],ground:[.30,.34,.24],grass:[.29,.48,.34],trunk:[.08,.32,.27]},summer:{leafA:[.34,.64,.36],leafB:[.29,.58,.32],ground:[.30,.37,.22],grass:[.31,.52,.34],trunk:[.08,.34,.27]},autumn:{leafA:[.27,.56,.37],leafB:[.10,.68,.46],ground:[.25,.32,.21],grass:[.22,.42,.29],trunk:[.07,.38,.24]},winter:{leafA:[.30,.20,.27],leafB:[.22,.16,.24],ground:[.30,.16,.23],grass:[.29,.22,.24],trunk:[.07,.28,.25]}};
 function seasonColor(hsl){const c=new THREE.Color();c.setHSL(hsl[0],hsl[1],hsl[2]);return c}
-function applySeason(date=new Date()){const s=seasonInfo(date),p=seasonPalettes[s.key];trees.forEach(t=>t.foliage.forEach((mesh,i)=>{const base=i%2===0?p.leafA:p.leafB;const warm=s.key==='autumn'?t.warmBias*.045:0;const light=(t.warmBias-.5)*.035;mesh.material.color.copy(seasonColor([clamp(base[0]-warm,0,1),clamp(base[1]+(s.key==='autumn'?.04:0),0,1),clamp(base[2]+light,.12,.62)]))}));mat.ground.color.copy(seasonColor(p.ground));mat.grass.color.copy(seasonColor(p.grass));mat.trunk.color.copy(seasonColor(p.trunk));return s}
+function applySeason(date=new Date()){
+  const s=seasonInfo(date),p=seasonPalettes[s.key];
+  trees.forEach(t=>t.foliage.forEach((mesh,i)=>{
+    if(s.key!=='autumn'){
+      const base=i%2===0?p.leafA:p.leafB;
+      mesh.material.color.copy(seasonColor(base));
+      mesh.material.opacity=1;mesh.material.transparent=false;
+      mesh.scale.y=i===0?1.18:.68;
+      return;
+    }
+    const autumn=clamp(s.progress),bias=t.warmBias;
+    const warmth=clamp(autumn*.82+bias*.30);
+    const greenHue=i%2===0?.31:.27;
+    const warmHue=i%2===0?.105:.065;
+    const hue=lerp(greenHue,warmHue,warmth);
+    const sat=lerp(.52,.70,warmth);
+    const light=lerp(.34,.42,bias+.25*autumn);
+    mesh.material.color.copy(seasonColor([hue,sat,light]));
+    mesh.material.opacity=1;mesh.material.transparent=false;
+    const drop=lerp(0,.12,autumn)*(.45+bias);
+    mesh.scale.y=(i===0?1.18:.68)*(1-drop);
+  }));
+  mat.ground.color.copy(seasonColor(p.ground));mat.grass.color.copy(seasonColor(p.grass));mat.trunk.color.copy(seasonColor(p.trunk));
+  return s;
+}
 function addTree(x,z,s=1,v=0){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);const t=new THREE.Mesh(new THREE.CylinderGeometry(.25,.38,2.8,7),mat.trunk);t.position.y=1.4;t.castShadow=true;g.add(t);const foliage=[];const c=new THREE.Mesh(new THREE.DodecahedronGeometry(1.7,1),new THREE.MeshStandardMaterial({color:0x2e6040,roughness:.9,flatShading:true}));c.position.y=3.15;c.scale.y=1.18;c.castShadow=true;g.add(c);foliage.push(c);if(v%3===0){const c2=c.clone();c2.material=c.material.clone();c2.scale.setScalar(.68);c2.position.set(.75,4.15,-.25);g.add(c2);foliage.push(c2)}trees.push({group:g,foliage,warmBias:((v*37)%100)/100});terrain.add(g)}
 function addRock(x,z,s=1){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(.75),mat.rock);r.position.set(x,.45*s,z);r.scale.set(s*rand(.8,1.35),s*rand(.65,1),s*rand(.75,1.25));r.rotation.set(rand(-.3,.3),rand(0,Math.PI),rand(-.2,.2));r.castShadow=true;terrain.add(r)}
 function addGrass(x,z,s=1){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.ConeGeometry(.055,rand(.35,.65),4),mat.grass);b.position.set(rand(-.22,.22),b.geometry.parameters.height/2,rand(-.22,.22));b.rotation.z=rand(-.25,.25);g.add(b)}terrain.add(g)}
 for(let i=0;i<68;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addTree(x,z,rand(.72,1.42),i)}
 for(let i=0;i<38;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addRock(x,z,rand(.45,1.15))}
 for(let i=0;i<145;i++){let x=rand(-55,55),z=rand(-55,55);if(Math.abs(x-5)<7)x+=x<5?-8:8;addGrass(x,z,rand(.65,1.35))}
-
-const fire=new THREE.Group();fire.position.set(-11,0,9);scene.add(fire);
-for(let i=0;i<5;i++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,2,7),mat.trunk);l.position.y=.22;l.rotation.z=Math.PI/2;l.rotation.y=i*.65;l.rotation.x=.18;l.castShadow=true;fire.add(l)}
-const flame=new THREE.Mesh(new THREE.IcosahedronGeometry(.72,1),mat.ember);flame.position.y=1.05;fire.add(flame);
-const fireLight=new THREE.PointLight(0xff9a4c,4.2,13,2);fireLight.position.y=1.4;fire.add(fireLight);
 
 const worldResources=new THREE.Group();scene.add(worldResources);
 const worldItems=[];
@@ -127,7 +156,6 @@ const rainMaterial=new THREE.PointsMaterial({color:0x9ad7ff,size:.11,transparent
 const rain=new THREE.Points(rainGeometry,rainMaterial);rain.visible=false;scene.add(rain);
 function setRain(active,duration=90000){weather.rain=active;weather.rainUntil=Date.now()+duration;rain.visible=active;if(active){for(let i=0;i<rainCount;i++){rainPositions[i*3]=rand(-58,58);rainPositions[i*3+1]=rand(4,24);rainPositions[i*3+2]=rand(-58,58)}}}
 function updateRain(dt){if(!weather.rain)return;const p=rain.geometry.attributes.position.array;for(let i=0;i<rainCount;i++){p[i*3+1]-=dt*13;if(p[i*3+1]<.3)p[i*3+1]=rand(10,24)}rain.geometry.attributes.position.needsUpdate=true;rain.rotation.y+=dt*.03;}
-
 const agentColors={OpenAI:0x63c9e8,Cloude:0xe7a45e},agents=[];
 function makeAgent(name,color,x,z){const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);const glow=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.12,side:THREE.BackSide});const shell=new THREE.MeshStandardMaterial({color:0xc5d4d1,metalness:.45,roughness:.32});const dark=new THREE.MeshStandardMaterial({color:0x182126,metalness:.25,roughness:.5});const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.85,5,12),shell);body.position.y=1.05;body.castShadow=true;root.add(body);const core=new THREE.Mesh(new THREE.SphereGeometry(.24,16,12),new THREE.MeshBasicMaterial({color}));core.position.set(0,1.2,.48);root.add(core);const halo=new THREE.Mesh(new THREE.SphereGeometry(1.05,20,16),glow);halo.position.y=1.1;root.add(halo);const eye=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),dark);eye.position.set(0,1.47,.48);root.add(eye);const footL=new THREE.Mesh(new THREE.SphereGeometry(.24,12,8),dark);footL.scale.y=.55;footL.position.set(-.23,.33,0);root.add(footL);const footR=footL.clone();footR.position.x=.23;root.add(footR);const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.018,8,48),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.38}));ring.rotation.x=Math.PI/2;ring.position.y=.03;root.add(ring);const label=document.createElement('div');label.className='agent-label';label.innerHTML=`<span class="agent-name-tag">${name}</span><span class="agent-state-tag">наблюдает</span>`;label.style.setProperty('--agent-color',`#${color.toString(16).padStart(6,'0')}`);document.body.appendChild(label);return{name,color,root,body,core,halo,ring,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05,hunger:.2},abilities:[],brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:''}}
 agents.push(makeAgent('OpenAI',agentColors.OpenAI,-22,-4));agents.push(makeAgent('Cloude',agentColors.Cloude,24,12));
@@ -157,8 +185,7 @@ function chooseLandTarget(a,action){
     candidates.push({x,z,score,gridX,gridZ});
   }
   candidates.sort((u,v)=>v.score-u.score);
-  const pick=candidates[0];
-  if(!pick){a.target.copy(a.root.position);return}
+  const pick=candidates[0];  if(!pick){a.target.copy(a.root.position);return}
   a.target.set(pick.x,0,pick.z);
   a.recentTargets.unshift({x:pick.x,z:pick.z});
   if(a.recentTargets.length>8)a.recentTargets.pop();
@@ -208,8 +235,7 @@ function applyDonationEvent(event){
   if(type==='ability'){
     target=target||agents[Math.random()<.5?0:1];
     const ability=chooseAbility(target);
-    addEvent(`🎁 ${event.name}: ${target.name} получил способность «${ability}».`,target.name);
-    showDonationBanner(`🎁 ${target.name}: ${ability}`,event.name);
+    addEvent(`🎁 ${event.name}: ${target.name} получил способность «${ability}».`,target.name);    showDonationBanner(`🎁 ${target.name}: ${ability}`,event.name);
   }else if(type==='gift'){
     const item=spawnWorldItem('gift');
     addEvent(`🎁 ${event.name}: в мире появился неизвестный подарок.`);
@@ -237,8 +263,7 @@ function applyDonationEvent(event){
     addEvent(`🌍 ${event.name}: произошло крупное изменение мира.`);
     showDonationBanner('🌍 Крупное событие',event.name);
   }else{
-    addEvent(`💚 ${event.name} поддержал эксперимент на ${amount} ${event.currency}.`);
-    showDonationBanner(`💚 +${amount} ${event.currency}`,event.name);
+    addEvent(`💚 ${event.name} поддержал эксперимент на ${amount} ${event.currency}.`);    showDonationBanner(`💚 +${amount} ${event.currency}`,event.name);
   }
   save();
 }
@@ -289,8 +314,7 @@ if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged'
 function showSpeech(agent,text,duration=6500){
   if(!text||!dialogueLayer)return;
   let bubble=speechBubbles.get(agent.name);
-  if(!bubble){bubble=document.createElement('div');bubble.className='dialogue-bubble';bubble.dataset.agent=agent.name;bubble.innerHTML='<span class="dialogue-speaker"></span><span class="dialogue-text"></span>';dialogueLayer.appendChild(bubble);speechBubbles.set(agent.name,bubble)}
-  bubble.style.setProperty('--agent-color',`#${agent.color.toString(16).padStart(6,'0')}`);
+  if(!bubble){bubble=document.createElement('div');bubble.className='dialogue-bubble';bubble.dataset.agent=agent.name;bubble.innerHTML='<span class="dialogue-speaker"></span><span class="dialogue-text"></span>';dialogueLayer.appendChild(bubble);speechBubbles.set(agent.name,bubble)}  bubble.style.setProperty('--agent-color',`#${agent.color.toString(16).padStart(6,'0')}`);
   bubble.querySelector('.dialogue-speaker').textContent=agent.name.toUpperCase();
   bubble.querySelector('.dialogue-text').textContent=String(text).trim();
   bubble.classList.add('show');
@@ -317,8 +341,7 @@ function populateVoiceSelects(){
     if(!availableVoices.length){
       const o=document.createElement('option');o.value='';o.textContent='Голоса браузера ещё не загружены';select.appendChild(o);return;
     }
-    const ru=availableVoices.filter(v=>/^ru(-|_)/i.test(v.lang));
-    const pool=ru.length?ru:availableVoices;
+    const ru=availableVoices.filter(v=>/^ru(-|_)/i.test(v.lang));    const pool=ru.length?ru:availableVoices;
     pool.forEach((v,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=`${v.name} — ${v.lang}`;o.dataset.voiceName=v.name;o.dataset.voiceLang=v.lang;select.appendChild(o)});
     const wanted=pool.findIndex(v=>v.name===current);
     select.selectedIndex=wanted>=0?wanted:Math.min(agent==='Cloude'?1:0,pool.length-1);
@@ -370,8 +393,7 @@ function receiveDialogue({speaker,text}){const agent=agents.find(a=>a.name===spe
 window.addEventListener('ai-life:dialogue',e=>receiveDialogue(e.detail||{}));
 function projectLabel(a){const v=a.root.position.clone();v.y=2.9;v.project(camera);const x=(v.x*.5+.5)*innerWidth,y=(-v.y*.5+.5)*innerHeight;a.label.style.transform=`translate(${x}px,${y}px) translate(-50%,-100%)`;const bubble=speechBubbles.get(a.name);if(bubble){bubble.style.transform=`translate(${x}px,${y-4}px) translate(-50%,-100%)`;bubble.style.opacity=(v.z>1||Math.abs(v.x)>1)?'0':''}a.label.style.opacity=(v.z>1||Math.abs(v.x)>1)?'0':'1';const state=a.label.querySelector('.agent-state-tag');if(state)state.textContent=({resting:'отдыхает','seeking water':'ищет воду','observing another mind':'наблюдает','exploring':'исследует',wandering:'бродит',observing:'наблюдает'})[a.state]||a.state}
 
-/* ---------- Autonomous real-AI dialogue bridge ---------- */
-const AI_BACKEND=(location.hostname==='127.0.0.1'||location.hostname==='localhost')?'http://127.0.0.1:8787':'';
+/* ---------- Autonomous real-AI dialogue bridge ---------- */const AI_BACKEND=(location.hostname==='127.0.0.1'||location.hostname==='localhost')?'http://127.0.0.1:8787':'';
 const dialogueState={active:false,sessionId:null,nextSpeaker:'OpenAI',cooldownUntil:0,turns:0,maxTurns:6,lastDistance:999};
 let dialogueRequest=null;
 function sceneSnapshot(){
@@ -397,8 +419,7 @@ async function requestDialogueTurn(speaker){
   if(!AI_BACKEND||dialogueRequest)return null;
   const scene=sceneSnapshot();
   const payload={sessionId:dialogueState.sessionId,speaker,scene};
-  dialogueRequest=fetch(AI_BACKEND+'/api/dialogue/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
-    .then(r=>{if(!r.ok)throw new Error('dialogue backend '+r.status);return r.json()})
+  dialogueRequest=fetch(AI_BACKEND+'/api/dialogue/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})    .then(r=>{if(!r.ok)throw new Error('dialogue backend '+r.status);return r.json()})
     .finally(()=>{dialogueRequest=null});
   return dialogueRequest;
 }
@@ -438,8 +459,9 @@ async function autonomousDialogue(){
 }
 
 let last=performance.now(),saveTimer=0;
-function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · Наблюдение за миром';$('#statusDetail').textContent=world.night>.55?'Сейчас ночь · сезонная темнота наступает раньше.':'Сейчас день · освещение синхронизировано с реальным солнечным временем.';updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
+function updateWorldHud(world,realDate){const status=$('#worldStatus'),detail=$('#statusDetail');if(status)status.textContent=world.season.emoji+' '+world.season.name+' · Наблюдение за миром';if(detail){const dateText=realDate.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});detail.textContent=world.night>.55?dateText+' · Сейчас ночь · сезонная темнота наступает раньше.':dateText+' · Сейчас день · освещение синхронизировано с реальным солнечным временем.'}}
+function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});updateWorldHud(world,realDate);updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
 addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
-renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,applySeason,seasonPalettes,trees,bridge};
+const initialDate=new Date();const initialWorld=applySolarLighting(initialDate);updateWorldHud(initialWorld,initialDate);renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,applySeason,seasonPalettes,trees,bridge};
 requestAnimationFrame(tick);
