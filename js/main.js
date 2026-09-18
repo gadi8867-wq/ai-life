@@ -83,12 +83,14 @@ terrain.add(bankPebbles);
  * Continuous autumn calendar for Nuremberg: week-to-week changes are interpolated.
  */
 const trees=[];
+const seasonalState={wind:0,leafFall:0,temperatureC:12,rainTarget:.3};
 function yearDay(date=new Date()){const y=date.getUTCFullYear();return Math.floor((Date.UTC(y,date.getUTCMonth(),date.getUTCDate())-Date.UTC(y,0,1))/86400000)+1}
 function smoothstep(t){t=clamp(t);return t*t*(3-2*t)}
 function autumnProgress(date=new Date()){
   const y=date.getUTCFullYear();
-  const start=Date.UTC(y,8,1),end=Date.UTC(y,10,30);
-  return clamp((date.getTime()-start)/(end-start));
+  const meteorologicalStart=Date.UTC(y,8,1);
+  const winterStart=Date.UTC(y,11,1);
+  return smoothstep((date.getTime()-meteorologicalStart)/(winterStart-meteorologicalStart));
 }
 function seasonInfo(date=new Date()){
   const m=date.getMonth();
@@ -97,46 +99,82 @@ function seasonInfo(date=new Date()){
   if(m>=8&&m<=10)return{name:'Осень',emoji:'🍂',key:'autumn',progress:autumnProgress(date)};
   return{name:'Зима',emoji:'❄️',key:'winter',progress:1};
 }
-const seasonPalettes={spring:{leafA:[.32,.58,.38],leafB:[.25,.48,.31],ground:[.29,.34,.23],grass:[.30,.49,.34],trunk:[.07,.30,.23]},summer:{leafA:[.34,.64,.36],leafB:[.29,.58,.32],ground:[.30,.37,.22],grass:[.31,.52,.34],trunk:[.08,.34,.27]},autumn:{leafA:[.27,.52,.32],leafB:[.095,.76,.50],ground:[.12,.28,.17],grass:[.22,.43,.28],trunk:[.055,.30,.19]},winter:{leafA:[.58,.12,.48],leafB:[.58,.10,.38],ground:[.58,.08,.72],grass:[.58,.10,.65],trunk:[.58,.12,.32]}};
+const seasonPalettes={
+  spring:{leafA:[.31,.58,.37],leafB:[.25,.49,.31],ground:[.30,.36,.24],grass:[.30,.50,.34],trunk:[.075,.30,.23]},
+  summer:{leafA:[.34,.66,.37],leafB:[.29,.58,.32],ground:[.31,.39,.24],grass:[.32,.54,.35],trunk:[.08,.33,.25]},
+  autumn:{leafA:[.075,.72,.31],leafB:[.055,.82,.43],ground:[.075,.25,.19],grass:[.22,.40,.28],trunk:[.055,.32,.22]},
+  winter:{leafA:[.58,.08,.28],leafB:[.58,.10,.34],ground:[.58,.07,.84],grass:[.58,.08,.70],trunk:[.055,.18,.16]}
+};
 function seasonColor(hsl){const c=new THREE.Color();c.setHSL(hsl[0],hsl[1],hsl[2]);return c}
-function autumnClimate(date=new Date()){const p=autumnProgress(date),d=yearDay(date),weekly=.5+.5*Math.sin((d-248)/7*2*Math.PI),slow=.5+.5*Math.sin((d-252)/19*2*Math.PI);return{progress:p,temperature:lerp(15.5,5.5,p)+lerp(1.2,-1.2,slow)+lerp(.5,-.5,weekly),rainTarget:clamp(.30+.38*p+.14*slow+.06*weekly)}}
-const seasonLeaves=(()=>{const count=150,positions=new Float32Array(count*3),drift=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=rand(-58,58);positions[i*3+1]=rand(2,18);positions[i*3+2]=rand(-58,58);drift[i*3]=rand(-.35,.35);drift[i*3+1]=rand(.65,1.35);drift[i*3+2]=rand(-.25,.25)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const points=new THREE.Points(geometry,new THREE.PointsMaterial({color:0xe0a04b,size:.14,transparent:true,opacity:.72,depthWrite:false}));points.visible=false;scene.add(points);return{points,positions,drift}})();
-const leafBed=(()=>{const count=620,positions=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=rand(-55,55);positions[i*3+1]=.035;positions[i*3+2]=rand(-55,55)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const material=new THREE.PointsMaterial({color:0xb06a35,size:.16,transparent:true,opacity:0,depthWrite:false});const points=new THREE.Points(geometry,material);scene.add(points);return points})();
+function autumnClimate(date=new Date()){
+  const p=autumnProgress(date),d=yearDay(date);
+  const weekly=.5+.5*Math.sin((d-248)/7*2*Math.PI);
+  const slow=.5+.5*Math.sin((d-252)/19*2*Math.PI);
+  return{
+    progress:p,
+    temperature:lerp(15.5,5.5,p)+lerp(1.2,-1.2,slow)+lerp(.5,-.5,weekly),
+    rainTarget:clamp(.30+.38*p+.14*slow+.06*weekly)
+  };
+}
+const seasonLeaves=(()=>{
+  const count=180,positions=new Float32Array(count*3),drift=new Float32Array(count*3);
+  for(let i=0;i<count;i++){
+    positions[i*3]=rand(-58,58);positions[i*3+1]=rand(2,18);positions[i*3+2]=rand(-58,58);
+    drift[i*3]=rand(-.35,.35);drift[i*3+1]=rand(.55,1.2);drift[i*3+2]=rand(-.28,.28);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  const points=new THREE.Points(geometry,new THREE.PointsMaterial({color:0xc98235,size:.13,transparent:true,opacity:.72,depthWrite:false}));
+  points.visible=false;scene.add(points);
+  return{points,positions,drift};
+})();
+const leafBed=(()=>{
+  const count=900,positions=new Float32Array(count*3);
+  for(let i=0;i<count;i++){positions[i*3]=rand(-55,55);positions[i*3+1]=.035;positions[i*3+2]=rand(-55,55)}
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  const material=new THREE.PointsMaterial({color:0xa85f2c,size:.14,transparent:true,opacity:0,depthWrite:false});
+  const points=new THREE.Points(geometry,material);scene.add(points);return points;
+})();
 function applySeason(date=new Date()){
   const s=seasonInfo(date),p=s.key==='autumn'?s.progress:0,palette=seasonPalettes[s.key],climate=autumnClimate(date);
+  seasonalState.wind=s.key==='autumn' ? .12+.46*p : s.key==='winter'?.08:s.key==='spring'?.06:.035;
+  seasonalState.leafFall=s.key==='autumn'?p:0;
+  seasonalState.temperatureC=climate.temperature;seasonalState.rainTarget=climate.rainTarget;
   trees.forEach(t=>t.foliage.forEach((mesh,i)=>{
     if(s.key==='autumn'){
-      // September stays richly mixed: green, lime, amber, ochre and small russet accents.
-      const clusterBias=mesh.userData.seasonBias??(i/Math.max(1,t.foliage.length-1));
-      const phase=clamp(.10+p*.92+t.warmBias*.20+clusterBias*.34);
-      const hue=phase<.48?lerp(.30,.12,phase/.48):lerp(.12,.045,(phase-.48)/.52);
-      const sat=phase<.48?lerp(.44,.72,phase/.48):lerp(.72,.90,(phase-.48)/.52);
-      const light=phase<.48?lerp(.27,.37,phase/.48):lerp(.37,.43,(phase-.48)/.52);
-      mesh.material.color.copy(seasonColor([hue,sat,light]));
+      const bias=clamp(t.warmBias*.72+p*.92);
+      const greenHues=[.29,.25,.20,.14,.075,.045];
+      const hue=greenHues[(i+Math.floor(t.warmBias*greenHues.length))%greenHues.length];
+      const warmHue=lerp(.30,.045,bias);
+      const finalHue=lerp(hue,warmHue,p*.72);
+      const sat=lerp(.42,.78,bias);
+      const light=lerp(.235,.38,.35+.65*Math.sin((t.warmBias+p)*Math.PI));
+      mesh.material.color.copy(seasonColor([finalHue,sat,clamp(light,.22,.42)]));
     }else{
       const base=i%2===0?palette.leafA:palette.leafB;
-      mesh.material.color.copy(seasonColor([base[0],base[1],clamp(base[2]+(t.warmBias-.5)*.035,.12,.62)]));
+      mesh.material.color.copy(seasonColor([base[0],base[1],clamp(base[2]+(t.warmBias-.5)*.035,.10,.62)]));
     }
   }));
-  mat.ground.color.copy(seasonColor(palette.ground));mat.grass.color.copy(seasonColor(palette.grass));mat.trunk.color.copy(seasonColor(palette.trunk));
+  mat.ground.color.copy(seasonColor(palette.ground));
+  mat.grass.color.copy(seasonColor(palette.grass));
+  mat.trunk.color.copy(seasonColor(palette.trunk));
   seasonLeaves.points.visible=s.key==='autumn';
-  seasonLeaves.points.material.opacity=s.key==='autumn'?lerp(.30,.88,p):0;
-  seasonLeaves.points.material.color.copy(seasonColor([lerp(.12,.055,p),lerp(.58,.90,p),lerp(.40,.46,p)]));
-  leafBed.material.opacity=s.key==='autumn'?lerp(.055,.55,p):0;
-  leafBed.material.color.copy(seasonColor([lerp(.09,.045,p),lerp(.52,.78,p),lerp(.28,.36,p)]));
+  seasonLeaves.points.material.opacity=s.key==='autumn'?lerp(.16,.82,p):0;
+  leafBed.material.opacity=s.key==='autumn'?lerp(.025,.58,p):0;
   return{...s,temperatureC:climate.temperature,rainTarget:climate.rainTarget,leafAccumulation:p};
 }
 function updateSeasonLeaves(dt){
   if(!seasonLeaves.points.visible)return;
-  const p=seasonLeaves.positions,d=seasonLeaves.drift,wind=weather.wind;
+  const p=seasonLeaves.positions,d=seasonLeaves.drift;
+  const gust=seasonalState.wind*(.55+.45*Math.sin(Date.now()*.0007));
   for(let i=0;i<p.length/3;i++){
-    p[i*3]+=(d[i*3]+wind*.08)*dt;
+    p[i*3]+=d[i*3]*dt+gust*dt;
     p[i*3+1]-=d[i*3+1]*dt;
-    p[i*3+2]+=(d[i*3+2]+wind*.035)*dt;
+    p[i*3+2]+=d[i*3+2]*dt+Math.sin((i+1)*1.7+Date.now()*.0009)*gust*.08*dt;
     if(p[i*3+1]<.2){p[i*3+1]=rand(9,18);p[i*3]=rand(-58,58);p[i*3+2]=rand(-58,58)}
   }
   seasonLeaves.points.geometry.attributes.position.needsUpdate=true;
-  seasonLeaves.points.rotation.y+=dt*(.015+Math.abs(wind)*.004);
+  seasonLeaves.points.rotation.y+=dt*.012;
 }
 function addTree(x,z,s=1,v=0){
   const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);
