@@ -8,6 +8,24 @@ const dist2=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const lerp=(a,b,t)=>a+(b-a)*t;
 const SAVE_KEY='ai-life-2-v1',WORLD=120;
 
+const LIVE_WEATHER_URL='https://api.open-meteo.com/v1/forecast?latitude=49.4542&longitude=11.0775&current=temperature_2m&timezone=Europe%2FBerlin';
+let liveTemperatureC=null;
+let lastWeatherFetch=0;
+async function refreshLiveTemperature(now=Date.now()){
+  if(now-lastWeatherFetch<10*60*1000)return;
+  lastWeatherFetch=now;
+  try{
+    const response=await fetch(LIVE_WEATHER_URL,{cache:'no-store'});
+    if(!response.ok)throw new Error('weather '+response.status);
+    const data=await response.json();
+    const value=Number(data?.current?.temperature_2m);
+    if(Number.isFinite(value))liveTemperatureC=value;
+  }catch(error){
+    console.warn('Live weather unavailable; using seasonal climate model.',error);
+  }
+}
+
+
 const scene=new THREE.Scene();
 const dayColor=new THREE.Color(0x79a9ad),nightColor=new THREE.Color(0x08131e);
 scene.background=dayColor.clone();
@@ -441,7 +459,7 @@ async function autonomousDialogue(){
 }
 
 let last=performance.now(),saveTimer=0;
-function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);weather.rainLevel=lerp(weather.rainLevel,weather.rainTarget,.018);rainMaterial.opacity=.62*weather.rainLevel;rain.visible=weather.rainLevel>.03||weather.rain;if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);updateSeasonLeaves(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · Наблюдение за миром';$('#statusDetail').textContent=world.night>.55?'Сейчас ночь · сезонная темнота наступает раньше.':'Сейчас день · освещение синхронизировано с реальным солнечным временем.';updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
+function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);refreshLiveTemperature(now);weather.rainLevel=lerp(weather.rainLevel,weather.rainTarget,.018);rainMaterial.opacity=.62*weather.rainLevel;rain.visible=weather.rainLevel>.03||weather.rain;if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);updateSeasonLeaves(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});$('#temperature').textContent=`${Math.round(liveTemperatureC??world.temperatureC)}°C`;$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · Наблюдение за миром';$('#statusDetail').textContent=world.night>.55?'Сейчас ночь · сезонная темнота наступает раньше.':'Сейчас день · освещение синхронизировано с реальным солнечным временем.';updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
 addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
 renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,autumnProgress,autumnClimate,applySeason,seasonPalettes,trees,leafBed,bridge,weather};
