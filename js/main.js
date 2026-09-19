@@ -168,10 +168,16 @@ function makeAgent(name,color,x,z){
   const eyeMat=new THREE.MeshBasicMaterial({color:isOpenAI?0x63c9e8:0xe7a45e});
   const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.92,6,14),shell);
   body.position.y=1.18;body.castShadow=true;root.add(body);
-  const chest=new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,.58,10),shell);
-  chest.rotation.x=Math.PI/2;chest.position.set(0,1.25,.34);chest.castShadow=true;root.add(chest);
-  const core=new THREE.Mesh(new THREE.SphereGeometry(.17,16,12),new THREE.MeshBasicMaterial({color}));
-  core.position.set(0,1.22,.63);root.add(core);
+  // Inset downward-pointing triangle: flush with the torso instead of a protruding tube/sphere.
+  const chestInset=new THREE.Shape();
+  chestInset.moveTo(-.24,.16);chestInset.lineTo(.24,.16);chestInset.lineTo(0,-.22);chestInset.closePath();
+  const chestInsetGeo=new THREE.ShapeGeometry(chestInset);
+  const chestPlate=new THREE.Mesh(chestInsetGeo,dark);
+  chestPlate.position.set(0,1.25,.474);root.add(chestPlate);
+  const glowInset=new THREE.Shape();
+  glowInset.moveTo(-.16,.105);glowInset.lineTo(.16,.105);glowInset.lineTo(0,-.145);glowInset.closePath();
+  const glowPlate=new THREE.Mesh(new THREE.ShapeGeometry(glowInset),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.95}));
+  glowPlate.position.set(0,1.25,.478);root.add(glowPlate);
   const halo=new THREE.Mesh(new THREE.SphereGeometry(1.08,20,16),glow);
   halo.position.y=1.22;root.add(halo);
   const head=new THREE.Mesh(new THREE.SphereGeometry(.56,18,14),shell);
@@ -189,7 +195,7 @@ function makeAgent(name,color,x,z){
   const ring=new THREE.Mesh(new THREE.TorusGeometry(.74,.018,8,48),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.4}));
   ring.rotation.x=Math.PI/2;ring.position.y=.04;root.add(ring);
   const label=document.createElement('div');label.className='agent-label';label.innerHTML=`<span class="agent-name-tag">${name}</span><span class="agent-state-tag">наблюдает</span>`;label.style.setProperty('--agent-color',`#${color.toString(16).padStart(6,'0')}`);document.body.appendChild(label);
-  return{name,color,root,body,core,halo,ring,head,eyeL,eyeR,mouth,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05,hunger:.2},abilities:[],brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:'',isOpenAI};
+  return{name,color,root,body,halo,ring,head,eyeL,eyeR,mouth,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05,hunger:.2},abilities:[],brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:'',isOpenAI};
 }
 agents.push(makeAgent('OpenAI',agentColors.OpenAI,-22,-4));agents.push(makeAgent('Cloude',agentColors.Cloude,24,12));
 
@@ -197,8 +203,7 @@ class AgentBrain{constructor(agent){this.agent=agent;this.lastThought='набл�
 agents.forEach(a=>a.brain=new AgentBrain(a));
 spawnWorldItem('resource',-28,-18);spawnWorldItem('resource',31,-25);spawnWorldItem('resource',-34,27);
 function daylightFactor(v){return clamp((v+.2)/1.2)}
-function isWalkable(x,z){if(Math.abs(x)>55||Math.abs(z)>55)return false;const riverX=5-z*.045;const bridgeCorridor=Math.abs(z)<=2.15&&Math.abs(x-riverX)<=9.2;if(bridgeCorridor)return true;return Math.abs(x-riverX)>7.2}
-function chooseSafeSpawn(x,z){let best=null,bestD=Infinity;for(let i=0;i<120;i++){const a=rand(-50,50),b=rand(-50,50);if(!isWalkable(a,b))continue;const d=Math.hypot(a-x,b-z);if(d<bestD){bestD=d;best={x:a,z:b}}}return best||{x:0,z:0}}
+function isWalkable(x,z){if(Math.abs(x)>55||Math.abs(z)>55)return false;const riverX=5-z*.045;const bridgeCorridor=Math.abs(z)<=2.15&&Math.abs(x-riverX)<=9.2;if(bridgeCorridor)return true;return Math.abs(x-riverX)>7.2}function chooseSafeSpawn(x,z){let best=null,bestD=Infinity;for(let i=0;i<120;i++){const a=rand(-50,50),b=rand(-50,50);if(!isWalkable(a,b))continue;const d=Math.hypot(a-x,b-z);if(d<bestD){bestD=d;best={x:a,z:b}}}return best||{x:0,z:0}}
 function chooseLandTarget(a,action){
   const candidates=[];
   for(let i=0;i<80;i++){
@@ -351,7 +356,7 @@ function frameTarget(){if(cameraMode==='follow'&&selectedAgent)return selectedAg
 function updateCamera(dt){const target=frameTarget();if(cameraMode==='auto'){const spread=dist2(agents[0].root.position,agents[1].root.position);radius=lerp(radius,clamp(38+spread*.55,38,58),dt*.5);yaw+=dt*.035}if(cameraMode==='follow')radius=lerp(radius,20,dt*1.4);const pos=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch)*radius,Math.sin(pitch)*radius,Math.cos(yaw)*Math.cos(pitch)*radius).add(target);camera.position.lerp(pos,1-Math.pow(.001,dt));camera.lookAt(target)}
 
 function updateAgents(dt,now,world){agents.forEach(a=>{a.needs.energy=clamp(a.needs.energy+dt*.004);a.needs.thirst=clamp(a.needs.thirst+dt*.006);a.needs.curiosity=clamp(a.needs.curiosity+dt*.0015);if(now>a.stateUntil&&running){a.brain.decide(world,now);if(Math.random()<.35)addEvent(`${a.name} изменил решение: ${a.state}.`,a.name)}const p=a.root.position,target=a.target,d=dist2(p,target);if(a.state==='resting'){a.body.rotation.z=Math.sin(now*.001+a.phase)*.025;a.needs.energy=clamp(a.needs.energy-dt*.012);a.needs.thirst=clamp(a.needs.thirst-dt*.001)}else if(d>.7&&running){const dir=new THREE.Vector3(target.x-p.x,0,target.z-p.z).normalize();const speed=a.state==='observing another mind'?.55:.72;const nextX=p.x+dir.x*dt*speed,nextZ=p.z+dir.z*dt*speed;if(isWalkable(nextX,nextZ)){p.addScaledVector(dir,dt*speed);a.root.rotation.y=Math.atan2(dir.x,dir.z)}
-else {const safe=chooseSafeSpawn(p.x,p.z);a.target.set(safe.x,0,safe.z);chooseLandTarget(a,a.state==='seeking water'?'water':'explore')}a.needs.energy=clamp(a.needs.energy+dt*.0018);a.needs.thirst=clamp(a.needs.thirst+dt*.0012);a.needs.hunger=clamp(a.needs.hunger+dt*.0022);a.metrics.exploration=clamp(a.metrics.exploration+dt*.00012)}else if(running){if(a.state==='seeking water'){a.needs.thirst=clamp(a.needs.thirst-dt*.025);a.metrics.survival=clamp(a.metrics.survival+.0007);a.brain.learn('достиг воды')}if(a.state==='exploring'){a.needs.curiosity=clamp(a.needs.curiosity-dt*.02);a.brain.learn('обнаружено новое место')}if(a.state==='seeking resource'){const item=nearestVisibleItem(a);if(item&&Math.hypot(a.root.position.x-item.mesh.position.x,a.root.position.z-item.mesh.position.z)<1.5){item.claimed=true;a.needs.hunger=clamp(a.needs.hunger-dt*.08);a.metrics.survival=clamp(a.metrics.survival+.0015);a.brain.learn('найден и изучен ресурс')}}if(a.state==='observing another mind'){a.needs.social=clamp(a.needs.social-dt*.018);a.metrics.social=clamp(a.metrics.social+.0008);a.brain.learn('замечен другой разум')}a.stateUntil=now+rand(2500,6000)}const bob=Math.sin(now*.0024+a.phase)*.035;a.root.position.y=bob;a.core.scale.setScalar(1+Math.sin(now*.004+a.phase)*.08);const blink=Math.sin(now*.0017+a.phase*3.1)>0.985?0.045:1;a.eyeL.scale.y=blink;a.eyeR.scale.y=blink;const talking=speechBubbles.get(a.name)?.classList.contains('show');a.mouth.scale.x=talking?(1.05+Math.abs(Math.sin(now*.018+a.phase))*.5):1;a.mouth.scale.y=talking?.7:1;a.ring.rotation.z+=dt*.35;projectLabel(a)});const d=dist2(agents[0].root.position,agents[1].root.position);dialogueState.lastDistance=d;if(d<8.2){agents[0].needs.social=clamp(agents[0].needs.social+dt*.015);agents[1].needs.social=clamp(agents[1].needs.social+dt*.015);autonomousDialogue()}}
+else {const safe=chooseSafeSpawn(p.x,p.z);a.target.set(safe.x,0,safe.z);chooseLandTarget(a,a.state==='seeking water'?'water':'explore')}a.needs.energy=clamp(a.needs.energy+dt*.0018);a.needs.thirst=clamp(a.needs.thirst+dt*.0012);a.needs.hunger=clamp(a.needs.hunger+dt*.0022);a.metrics.exploration=clamp(a.metrics.exploration+dt*.00012)}else if(running){if(a.state==='seeking water'){a.needs.thirst=clamp(a.needs.thirst-dt*.025);a.metrics.survival=clamp(a.metrics.survival+.0007);a.brain.learn('достиг воды')}if(a.state==='exploring'){a.needs.curiosity=clamp(a.needs.curiosity-dt*.02);a.brain.learn('обнаружено новое место')}if(a.state==='seeking resource'){const item=nearestVisibleItem(a);if(item&&Math.hypot(a.root.position.x-item.mesh.position.x,a.root.position.z-item.mesh.position.z)<1.5){item.claimed=true;a.needs.hunger=clamp(a.needs.hunger-dt*.08);a.metrics.survival=clamp(a.metrics.survival+.0015);a.brain.learn('найден и изучен ресурс')}}if(a.state==='observing another mind'){a.needs.social=clamp(a.needs.social-dt*.018);a.metrics.social=clamp(a.metrics.social+.0008);a.brain.learn('замечен другой разум')}a.stateUntil=now+rand(2500,6000)}const bob=Math.sin(now*.0024+a.phase)*.035;a.root.position.y=bob;const blink=Math.sin(now*.0017+a.phase*3.1)>0.985?0.045:1;a.eyeL.scale.y=blink;a.eyeR.scale.y=blink;const talking=speechBubbles.get(a.name)?.classList.contains('show');a.mouth.scale.x=talking?(1.05+Math.abs(Math.sin(now*.018+a.phase))*.5):1;a.mouth.scale.y=talking?.7:1;a.ring.rotation.z+=dt*.35;projectLabel(a)});const d=dist2(agents[0].root.position,agents[1].root.position);dialogueState.lastDistance=d;if(d<8.2){agents[0].needs.social=clamp(agents[0].needs.social+dt*.015);agents[1].needs.social=clamp(agents[1].needs.social+dt*.015);autonomousDialogue()}}
 
 /* ---------- AI dialogue presentation + voice bridge ---------- */
 const dialogueLayer=$('#dialogue-layer');
@@ -397,8 +402,7 @@ function populateVoiceSelects(){
     const wanted=pool.findIndex(v=>v.name===current);
     select.selectedIndex=wanted>=0?wanted:Math.min(agent==='Cloude'?1:0,pool.length-1);
   });
-}
-function selectedVoice(agent){
+}function selectedVoice(agent){
   const select=voiceSelects()[agent];
   const pool=availableVoices.filter(v=>/^ru(-|_)/i.test(v.lang));
   const list=pool.length?pool:availableVoices;
