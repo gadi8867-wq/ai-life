@@ -160,12 +160,14 @@ function updateRain(dt){if(!weather.rain&&weather.rainLevel<=.03)return;const p=
 const agentColors={OpenAI:0x63c9e8,Cloude:0xe7a45e},agents=[];
 function makeAgent(name,color,x,z){
   const root=new THREE.Group();
-  root.position.set(x,0,z);scene.add(root);
+  root.position.set(x,0,z);
+  scene.add(root);
   const isOpenAI=name==='OpenAI';
-  const shell=new THREE.MeshStandardMaterial({color:isOpenAI?0xf1f5f3:0xeee6dc,metalness:.5,roughness:.28});
-  const dark=new THREE.MeshStandardMaterial({color:isOpenAI?0x111a20:0x251d19,metalness:.25,roughness:.42});
+  const shell=new THREE.MeshStandardMaterial({color:isOpenAI?0xf1f5f3:0xeee6dc,metalness:.46,roughness:.26});
+  const shellDark=new THREE.MeshStandardMaterial({color:isOpenAI?0xd9e2e1:0xd8cfc5,metalness:.4,roughness:.3});
+  const dark=new THREE.MeshStandardMaterial({color:isOpenAI?0x111a20:0x251d19,metalness:.28,roughness:.4});
   const eyeMat=new THREE.MeshBasicMaterial({color:isOpenAI?0x63c9e8:0xe7a45e});
-  const glow=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.12,side:THREE.BackSide});
+
   const makeRoundedRect=(w,h,r,depth,bevel=.07)=>{
     const s=new THREE.Shape();
     s.moveTo(-w/2+r,-h/2);s.lineTo(w/2-r,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);
@@ -175,59 +177,106 @@ function makeAgent(name,color,x,z){
     const g=new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelThickness:bevel*.55,bevelSize:bevel,bevelSegments:3,curveSegments:8});
     g.center();return g;
   };
-  const halo=new THREE.Mesh(new THREE.SphereGeometry(1.12,20,16),glow);halo.position.y=1.22;root.add(halo);
 
-  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.47,.86,8,16),shell);
-  body.position.y=1.18;body.castShadow=true;root.add(body);
+  /* One thin halo above the head — no glowing body sphere and no ground ring. */
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(.66,.035,10,64),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.95}));
+  halo.rotation.x=Math.PI/2;halo.position.y=2.78;root.add(halo);
 
-  const chestPlate=new THREE.Mesh(new THREE.CapsuleGeometry(.31,.38,5,10),dark);
-  chestPlate.scale.set(.9,.9,.34);chestPlate.position.set(0,1.26,.43);chestPlate.castShadow=true;root.add(chestPlate);
-  const chestInset=new THREE.Shape();
-  chestInset.moveTo(-.24,.16);chestInset.lineTo(.24,.16);chestInset.lineTo(0,-.22);chestInset.closePath();
-  const glowInset=new THREE.Shape();
-  glowInset.moveTo(-.16,.105);glowInset.lineTo(.16,.105);glowInset.lineTo(0,-.145);glowInset.closePath();
-  const triangleBase=new THREE.Mesh(new THREE.ShapeGeometry(chestInset),dark);
-  triangleBase.position.set(0,1.25,.555);root.add(triangleBase);
-  const triangleGlow=new THREE.Mesh(new THREE.ShapeGeometry(glowInset),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.98}));
-  triangleGlow.position.set(0,1.25,.56);root.add(triangleGlow);
+  /* Rounded armor torso. */
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.5,.72,8,18),shell);
+  body.scale.set(1.02,1.06,.82);body.position.y=1.22;body.castShadow=true;root.add(body);
+  const waist=new THREE.Mesh(new THREE.CapsuleGeometry(.3,.18,6,12),dark);
+  waist.scale.set(1.05,.7,.82);waist.position.y=.82;waist.castShadow=true;root.add(waist);
 
-  const head=new THREE.Mesh(makeRoundedRect(1.14,.9,.22,.34,.07),shell);
+  /* Embedded inverted triangle on the chest. */
+  const chestPlate=new THREE.Mesh(new THREE.CapsuleGeometry(.34,.38,6,12),dark);
+  chestPlate.scale.set(1.03,.92,.38);chestPlate.position.set(0,1.31,.43);chestPlate.castShadow=true;root.add(chestPlate);
+  const triangleBase=new THREE.Shape();
+  triangleBase.moveTo(-.245,.17);triangleBase.lineTo(.245,.17);triangleBase.lineTo(0,-.235);triangleBase.closePath();
+  const triangleGlowShape=new THREE.Shape();
+  triangleGlowShape.moveTo(-.17,.115);triangleGlowShape.lineTo(.17,.115);triangleGlowShape.lineTo(0,-.165);triangleGlowShape.closePath();
+  const triangleBack=new THREE.Mesh(new THREE.ShapeGeometry(triangleBase),shellDark);
+  triangleBack.position.set(0,1.31,.555);root.add(triangleBack);
+  const triangleGlow=new THREE.Mesh(new THREE.ShapeGeometry(triangleGlowShape),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.98}));
+  triangleGlow.position.set(0,1.31,.565);root.add(triangleGlow);
+
+  /* Big rounded helmet-like head. */
+  const head=new THREE.Mesh(makeRoundedRect(1.2,.92,.23,.34,.075),shell);
   head.position.set(0,2.08,.02);head.castShadow=true;root.add(head);
-  const face=new THREE.Mesh(makeRoundedRect(.93,.64,.16,.055,.025),dark);
+  const face=new THREE.Mesh(makeRoundedRect(.97,.66,.17,.055,.026),dark);
   face.position.set(0,2.08,.225);root.add(face);
-  const eyeGeo=new THREE.BoxGeometry(.16,.16,.055);
-  const eyeL=new THREE.Mesh(eyeGeo,eyeMat);eyeL.position.set(-.22,2.12,.27);root.add(eyeL);
-  const eyeR=eyeL.clone();eyeR.position.x=.22;root.add(eyeR);
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.22,.035,.045),eyeMat);
-  mouth.position.set(0,1.91,.27);root.add(mouth);
+  const eyeGeo=new THREE.BoxGeometry(.17,.17,.055);
+  const eyeL=new THREE.Mesh(eyeGeo,eyeMat);eyeL.position.set(-.225,2.12,.27);root.add(eyeL);
+  const eyeR=eyeL.clone();eyeR.position.x=.225;root.add(eyeR);
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.22,.035,.045),eyeMat);mouth.position.set(0,1.91,.27);root.add(mouth);
 
-  const earGeo=new THREE.TorusGeometry(.18,.035,8,20);
-  const earL=new THREE.Mesh(earGeo,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9}));earL.rotation.y=Math.PI/2;earL.position.set(-.59,2.08,.02);root.add(earL);
-  const earR=earL.clone();earR.position.x=.59;root.add(earR);
+  /* Circular ear modules. */
+  const earGeo=new THREE.TorusGeometry(.19,.038,8,24);
+  const earMat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.95});
+  const earL=new THREE.Mesh(earGeo,earMat);earL.rotation.y=Math.PI/2;earL.position.set(-.63,2.08,.02);root.add(earL);
+  const earR=earL.clone();earR.position.x=.63;root.add(earR);
 
-  const shoulderGeo=new THREE.SphereGeometry(.22,12,8);
-  const shoulderL=new THREE.Mesh(shoulderGeo,shell);shoulderL.scale.set(1,.86,1.05);shoulderL.position.set(-.57,1.48,0);shoulderL.castShadow=true;root.add(shoulderL);
-  const shoulderR=shoulderL.clone();shoulderR.position.x=.57;root.add(shoulderR);
+  /* Chunky articulated arms. */
+  const shoulderGeo=new THREE.SphereGeometry(.235,14,10);
+  const shoulderL=new THREE.Mesh(shoulderGeo,shell);shoulderL.scale.set(1.05,.9,1.08);shoulderL.position.set(-.59,1.5,0);shoulderL.castShadow=true;root.add(shoulderL);
+  const shoulderR=shoulderL.clone();shoulderR.position.x=.59;root.add(shoulderR);
+  const upperArmGeo=new THREE.CapsuleGeometry(.145,.34,7,12);
+  const upperArmL=new THREE.Mesh(upperArmGeo,shell);upperArmL.position.set(-.7,1.29,0);upperArmL.rotation.z=.12;upperArmL.castShadow=true;root.add(upperArmL);
+  const upperArmR=upperArmL.clone();upperArmR.position.x=.7;upperArmR.rotation.z=-.12;root.add(upperArmR);
+  const elbowGeo=new THREE.SphereGeometry(.145,10,8);
+  const elbowL=new THREE.Mesh(elbowGeo,dark);elbowL.position.set(-.73,1.08,0);elbowL.castShadow=true;root.add(elbowL);
+  const elbowR=elbowL.clone();elbowR.position.x=.73;root.add(elbowR);
+  const forearmGeo=new THREE.CapsuleGeometry(.16,.32,7,12);
+  const forearmL=new THREE.Mesh(forearmGeo,shell);forearmL.position.set(-.72,.9,.015);forearmL.rotation.z=.05;forearmL.castShadow=true;root.add(forearmL);
+  const forearmR=forearmL.clone();forearmR.position.x=.72;forearmR.rotation.z=-.05;root.add(forearmR);
+  const handL=new THREE.Mesh(new THREE.SphereGeometry(.15,12,10),dark);handL.scale.set(.85,1.08,.72);handL.position.set(-.72,.69,.035);handL.castShadow=true;root.add(handL);
+  const handR=handL.clone();handR.position.x=.72;root.add(handR);
+  for(const side of [-1,1]){
+    for(let i=0;i<3;i++){
+      const finger=new THREE.Mesh(new THREE.CapsuleGeometry(.027,.095,4,6),dark);
+      finger.position.set(side*(.72+(i-1)*.055),.58,.07);finger.rotation.z=side*(i-1)*.22;finger.castShadow=true;root.add(finger);
+    }
+  }
 
-  const armGeo=new THREE.CapsuleGeometry(.13,.46,6,10);
-  const armL=new THREE.Mesh(armGeo,shell);armL.position.set(-.67,1.12,0);armL.rotation.z=.08;armL.castShadow=true;root.add(armL);
-  const armR=armL.clone();armR.position.x=.67;armR.rotation.z=-.08;root.add(armR);
-  const handGeo=new THREE.SphereGeometry(.14,10,8);
-  const handL=new THREE.Mesh(handGeo,dark);handL.position.set(-.7,.79,.03);handL.castShadow=true;root.add(handL);
-  const handR=handL.clone();handR.position.x=.7;root.add(handR);
+  /* Rounded hips, knees, armored shins and broad boot-like feet. */
+  const hip=new THREE.Mesh(new THREE.SphereGeometry(.34,14,10),dark);
+  hip.scale.set(1.02,.52,.72);hip.position.y=.75;hip.castShadow=true;root.add(hip);
+  const thighGeo=new THREE.CapsuleGeometry(.19,.38,7,12);
+  const thighL=new THREE.Mesh(thighGeo,shell);thighL.position.set(-.245,.59,.005);thighL.castShadow=true;root.add(thighL);
+  const thighR=thighL.clone();thighR.position.x=.245;root.add(thighR);
+  const kneeL=new THREE.Mesh(new THREE.SphereGeometry(.16,11,9),dark);kneeL.position.set(-.245,.34,.035);kneeL.castShadow=true;root.add(kneeL);
+  const kneeR=kneeL.clone();kneeR.position.x=.245;root.add(kneeR);
+  const shinGeo=new THREE.CapsuleGeometry(.2,.3,7,12);
+  const shinL=new THREE.Mesh(shinGeo,shell);shinL.position.set(-.245,.13,.02);shinL.castShadow=true;root.add(shinL);
+  const shinR=shinL.clone();shinR.position.x=.245;root.add(shinR);
+  const footGeo=new THREE.CapsuleGeometry(.24,.34,7,12);
+  const footL=new THREE.Mesh(footGeo,shell);footL.scale.set(1.04,.7,1.48);footL.position.set(-.245,-.03,.13);footL.castShadow=true;root.add(footL);
+  const footR=footL.clone();footR.position.x=.245;root.add(footR);
+  const soleL=new THREE.Mesh(new THREE.CapsuleGeometry(.25,.35,7,12),dark);soleL.scale.set(1.04,.28,1.5);soleL.position.set(-.245,-.14,.13);soleL.castShadow=true;root.add(soleL);
+  const soleR=soleL.clone();soleR.position.x=.245;root.add(soleR);
 
-  const hip=new THREE.Mesh(new THREE.SphereGeometry(.32,12,8),dark);hip.scale.set(1,.48,.65);hip.position.y=.72;root.add(hip);
-  const legGeo=new THREE.CapsuleGeometry(.17,.54,6,10);
-  const legL=new THREE.Mesh(legGeo,shell);legL.position.set(-.23,.55,0);legL.castShadow=true;root.add(legL);
-  const legR=legL.clone();legR.position.x=.23;root.add(legR);
-  const footGeo=new THREE.CapsuleGeometry(.2,.28,5,8);
-  const footL=new THREE.Mesh(footGeo,dark);footL.scale.set(1,.62,1.35);footL.position.set(-.23,.22,.11);footL.castShadow=true;root.add(footL);
-  const footR=footL.clone();footR.position.x=.23;root.add(footR);
+  /* Small neon details on shins/boots. */
+  const accentMat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9});
+  const shinAccentL=new THREE.Mesh(new THREE.TorusGeometry(.125,.018,6,24),accentMat);
+  shinAccentL.rotation.x=Math.PI/2;shinAccentL.position.set(-.245,.1,.22);root.add(shinAccentL);
+  const shinAccentR=shinAccentL.clone();shinAccentR.position.x=.245;root.add(shinAccentR);
+  const bootAccentL=new THREE.Mesh(new THREE.TorusGeometry(.13,.018,6,24),accentMat);
+  bootAccentL.rotation.x=Math.PI/2;bootAccentL.position.set(-.245,-.03,.31);root.add(bootAccentL);
+  const bootAccentR=bootAccentL.clone();bootAccentR.position.x=.245;root.add(bootAccentR);
 
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(.74,.018,8,48),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.4}));
-  ring.rotation.x=Math.PI/2;ring.position.y=.04;root.add(ring);
-  const label=document.createElement('div');label.className='agent-label';label.innerHTML=`<span class="agent-name-tag">${name}</span><span class="agent-state-tag">наблюдает</span>`;label.style.setProperty('--agent-color',`#${color.toString(16).padStart(6,'0')}`);document.body.appendChild(label);
-  return{name,color,root,body,halo,ring,head,face,eyeL,eyeR,mouth,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05,hunger:.2},abilities:[],brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:'',isOpenAI};
+  const label=document.createElement('div');
+  label.className='agent-label';
+  label.innerHTML=\`<span class="agent-name-tag">\${name}</span><span class="agent-state-tag">наблюдает</span>\`;
+  label.style.setProperty('--agent-color',\`#\${color.toString(16).padStart(6,'0')}\`);
+  document.body.appendChild(label);
+
+  return{
+    name,color,root,body,halo,ring:halo,head,face,eyeL,eyeR,mouth,label,
+    target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,
+    metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},
+    memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05,hunger:.2},
+    abilities:[],brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:'',isOpenAI
+  };
 }
 agents.push(makeAgent('OpenAI',agentColors.OpenAI,-22,-4));agents.push(makeAgent('Cloude',agentColors.Cloude,24,12));
 
