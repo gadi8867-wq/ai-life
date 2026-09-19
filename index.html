@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070b0e">
 <title>AI Life 2.0 — OpenAI & Cloude</title>
-<link rel="stylesheet" href="./css/style.css?v=20260919">
+<link rel="stylesheet" href="./css/style.css?v=20260920">
 </head>
 <body>
 <div id="game"></div>
@@ -25,6 +25,31 @@
 <section class="scene-status" aria-live="polite">
   <div class="status-line"><span class="status-dot"></span><span id="worldStatus">Наблюдение за миром</span></div>
 </section>
+
+<aside class="agent-metrics agent-metrics-left" id="openaiMetrics" aria-label="Метрики OpenAI">
+  <div class="metrics-avatar metrics-avatar-openai">
+    <span class="avatar-halo"></span><span class="avatar-head"><span class="avatar-face"><i></i><i></i><b></b></span></span><span class="avatar-body"></span>
+  </div>
+  <div class="metrics-info">
+    <div class="metrics-head"><strong>OpenAI</strong><span id="openaiState">наблюдает</span></div>
+    <div class="metric-line"><span>❤️</span><div class="metric-track"><i id="openaiLife"></i></div><b id="openaiLifeValue">74</b></div>
+    <div class="metric-line"><span>🍖</span><div class="metric-track"><i id="openaiFood"></i></div><b id="openaiFoodValue">80</b></div>
+    <div class="metric-line"><span>💧</span><div class="metric-track"><i id="openaiWater"></i></div><b id="openaiWaterValue">78</b></div>
+    <div class="metric-line"><span>⚡</span><div class="metric-track"><i id="openaiEnergy"></i></div><b id="openaiEnergyValue">82</b></div>
+  </div>
+</aside>
+<aside class="agent-metrics agent-metrics-right" id="cloudeMetrics" aria-label="Метрики Cloude">
+  <div class="metrics-avatar metrics-avatar-cloude">
+    <span class="avatar-halo"></span><span class="avatar-head"><span class="avatar-face"><i></i><i></i><b></b></span></span><span class="avatar-body"></span>
+  </div>
+  <div class="metrics-info">
+    <div class="metrics-head"><strong>Cloude</strong><span id="cloudeState">наблюдает</span></div>
+    <div class="metric-line"><span>❤️</span><div class="metric-track"><i id="cloudeLife"></i></div><b id="cloudeLifeValue">74</b></div>
+    <div class="metric-line"><span>🍖</span><div class="metric-track"><i id="cloudeFood"></i></div><b id="cloudeFoodValue">80</b></div>
+    <div class="metric-line"><span>💧</span><div class="metric-track"><i id="cloudeWater"></i></div><b id="cloudeWaterValue">78</b></div>
+    <div class="metric-line"><span>⚡</span><div class="metric-track"><i id="cloudeEnergy"></i></div><b id="cloudeEnergyValue">82</b></div>
+  </div>
+</aside>
 <aside class="observatory" id="observatory" aria-hidden="true">
   <button class="panel-close" id="closePanel" aria-label="Закрыть">×</button>
   <div class="panel-kicker">НАБЛЮДЕНИЕ</div>
@@ -37,6 +62,6 @@
   <span class="pill-icon">✦</span>
   <span><b>ЭКСПЕРИМЕНТ</b><small id="pillDay">ДЕНЬ 001</small></span>
 </div>
-<script type="module" src="./js/main.js?v=20260919"></script>
+<script type="module" src="./js/main.js?v=20260920"></script>
 </body>
 </html>
