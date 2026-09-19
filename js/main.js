@@ -392,7 +392,6 @@ function renderAgentMetrics(){
 }
 function updatePill(){const elapsed=Math.max(0,Date.now()-experimentStart);const day=Math.floor(elapsed/86400000)+1;const pillDay=$('#pillDay');if(pillDay)pillDay.textContent='ДЕНЬ '+String(day).padStart(3,'0')}
 function updateStartButton(){const b=$('#start');if(!b)return;const label=b.querySelector('.start-text');const icon=b.querySelector('.start-icon');if(label)label.textContent=running?'ПАУЗА':'СТАРТ';if(icon)icon.textContent=running?'Ⅱ':'▶';b.setAttribute('aria-label',running?'Поставить эксперимент на паузу':'Запустить эксперимент')}
-$('#start')?.addEventListener('click',()=>{running=!running;addEvent(running?'Наблюдение возобновлено.':'Эксперимент поставлен на паузу.');save()});
 $('#brainOrb')?.addEventListener('click',()=>{const p=$('#observatory');if(!p)return;p.classList.toggle('open');p.setAttribute('aria-hidden',String(!p.classList.contains('open')));if(p.classList.contains('open'))renderStats()});
 $('#closePanel')?.addEventListener('click',()=>$('#observatory')?.classList.remove('open'));$('#controlOrb')?.addEventListener('click',()=>$('#controlDock')?.classList.toggle('open'));
 $('#followA')?.addEventListener('click',()=>{cameraMode='follow';selectedAgent=agents[0]});$('#followB')?.addEventListener('click',()=>{cameraMode='follow';selectedAgent=agents[1]});$('#free')?.addEventListener('click',()=>{cameraMode='free';selectedAgent=null});$('#auto')?.addEventListener('click',()=>{cameraMode='auto';selectedAgent=null});
