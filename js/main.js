@@ -162,40 +162,72 @@ function makeAgent(name,color,x,z){
   const root=new THREE.Group();
   root.position.set(x,0,z);scene.add(root);
   const isOpenAI=name==='OpenAI';
-  const glow=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.14,side:THREE.BackSide});
-  const shell=new THREE.MeshStandardMaterial({color:isOpenAI?0xdbe5e4:0xe6ddd2,metalness:.42,roughness:.34});
-  const dark=new THREE.MeshStandardMaterial({color:isOpenAI?0x152229:0x33251f,metalness:.2,roughness:.48});
+  const shell=new THREE.MeshStandardMaterial({color:isOpenAI?0xf1f5f3:0xeee6dc,metalness:.5,roughness:.28});
+  const dark=new THREE.MeshStandardMaterial({color:isOpenAI?0x111a20:0x251d19,metalness:.25,roughness:.42});
   const eyeMat=new THREE.MeshBasicMaterial({color:isOpenAI?0x63c9e8:0xe7a45e});
-  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.92,6,14),shell);
+  const glow=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.12,side:THREE.BackSide});
+  const makeRoundedRect=(w,h,r,depth,bevel=.07)=>{
+    const s=new THREE.Shape();
+    s.moveTo(-w/2+r,-h/2);s.lineTo(w/2-r,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);
+    s.lineTo(w/2,h/2-r);s.quadraticCurveTo(w/2,h/2,w/2-r,h/2);
+    s.lineTo(-w/2+r,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r);
+    s.lineTo(-w/2,-h/2+r);s.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2);
+    const g=new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelThickness:bevel*.55,bevelSize:bevel,bevelSegments:3,curveSegments:8});
+    g.center();return g;
+  };
+  const halo=new THREE.Mesh(new THREE.SphereGeometry(1.12,20,16),glow);halo.position.y=1.22;root.add(halo);
+
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.47,.86,8,16),shell);
   body.position.y=1.18;body.castShadow=true;root.add(body);
-  // Inset downward-pointing triangle: flush with the torso instead of a protruding tube/sphere.
+
+  const chestPlate=new THREE.Mesh(new THREE.CapsuleGeometry(.31,.38,5,10),dark);
+  chestPlate.scale.set(.9,.9,.34);chestPlate.position.set(0,1.26,.43);chestPlate.castShadow=true;root.add(chestPlate);
   const chestInset=new THREE.Shape();
   chestInset.moveTo(-.24,.16);chestInset.lineTo(.24,.16);chestInset.lineTo(0,-.22);chestInset.closePath();
-  const chestInsetGeo=new THREE.ShapeGeometry(chestInset);
-  const chestPlate=new THREE.Mesh(chestInsetGeo,dark);
-  chestPlate.position.set(0,1.25,.474);root.add(chestPlate);
   const glowInset=new THREE.Shape();
   glowInset.moveTo(-.16,.105);glowInset.lineTo(.16,.105);glowInset.lineTo(0,-.145);glowInset.closePath();
-  const glowPlate=new THREE.Mesh(new THREE.ShapeGeometry(glowInset),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.95}));
-  glowPlate.position.set(0,1.25,.478);root.add(glowPlate);
-  const halo=new THREE.Mesh(new THREE.SphereGeometry(1.08,20,16),glow);
-  halo.position.y=1.22;root.add(halo);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.56,18,14),shell);
-  head.scale.set(.92,1.0,.82);head.position.set(0,2.05,.02);head.castShadow=true;root.add(head);
-  const eyeGeo=new THREE.BoxGeometry(isOpenAI?.15:.14,.18,.06);
-  const eyeY=2.09;
-  const eyeL=new THREE.Mesh(eyeGeo,eyeMat);eyeL.position.set(-.22,eyeY,.47);root.add(eyeL);
+  const triangleBase=new THREE.Mesh(new THREE.ShapeGeometry(chestInset),dark);
+  triangleBase.position.set(0,1.25,.555);root.add(triangleBase);
+  const triangleGlow=new THREE.Mesh(new THREE.ShapeGeometry(glowInset),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.98}));
+  triangleGlow.position.set(0,1.25,.56);root.add(triangleGlow);
+
+  const head=new THREE.Mesh(makeRoundedRect(1.14,.9,.22,.34,.07),shell);
+  head.position.set(0,2.08,.02);head.castShadow=true;root.add(head);
+  const face=new THREE.Mesh(makeRoundedRect(.93,.64,.16,.055,.025),dark);
+  face.position.set(0,2.08,.225);root.add(face);
+  const eyeGeo=new THREE.BoxGeometry(.16,.16,.055);
+  const eyeL=new THREE.Mesh(eyeGeo,eyeMat);eyeL.position.set(-.22,2.12,.27);root.add(eyeL);
   const eyeR=eyeL.clone();eyeR.position.x=.22;root.add(eyeR);
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(isOpenAI?.24:.22,.045,.045),dark);
-  mouth.position.set(0,1.86,.49);root.add(mouth);
-  const armL=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.58,4,8),shell);armL.position.set(-.62,1.15,0);armL.rotation.z=.08;armL.castShadow=true;root.add(armL);
-  const armR=armL.clone();armR.position.x=.62;armR.rotation.z=-.08;root.add(armR);
-  const footL=new THREE.Mesh(new THREE.SphereGeometry(.25,12,8),dark);footL.scale.set(1,.58,1.2);footL.position.set(-.23,.34,.04);footL.castShadow=true;root.add(footL);
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.22,.035,.045),eyeMat);
+  mouth.position.set(0,1.91,.27);root.add(mouth);
+
+  const earGeo=new THREE.TorusGeometry(.18,.035,8,20);
+  const earL=new THREE.Mesh(earGeo,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9}));earL.rotation.y=Math.PI/2;earL.position.set(-.59,2.08,.02);root.add(earL);
+  const earR=earL.clone();earR.position.x=.59;root.add(earR);
+
+  const shoulderGeo=new THREE.SphereGeometry(.22,12,8);
+  const shoulderL=new THREE.Mesh(shoulderGeo,shell);shoulderL.scale.set(1,.86,1.05);shoulderL.position.set(-.57,1.48,0);shoulderL.castShadow=true;root.add(shoulderL);
+  const shoulderR=shoulderL.clone();shoulderR.position.x=.57;root.add(shoulderR);
+
+  const armGeo=new THREE.CapsuleGeometry(.13,.46,6,10);
+  const armL=new THREE.Mesh(armGeo,shell);armL.position.set(-.67,1.12,0);armL.rotation.z=.08;armL.castShadow=true;root.add(armL);
+  const armR=armL.clone();armR.position.x=.67;armR.rotation.z=-.08;root.add(armR);
+  const handGeo=new THREE.SphereGeometry(.14,10,8);
+  const handL=new THREE.Mesh(handGeo,dark);handL.position.set(-.7,.79,.03);handL.castShadow=true;root.add(handL);
+  const handR=handL.clone();handR.position.x=.7;root.add(handR);
+
+  const hip=new THREE.Mesh(new THREE.SphereGeometry(.32,12,8),dark);hip.scale.set(1,.48,.65);hip.position.y=.72;root.add(hip);
+  const legGeo=new THREE.CapsuleGeometry(.17,.54,6,10);
+  const legL=new THREE.Mesh(legGeo,shell);legL.position.set(-.23,.55,0);legL.castShadow=true;root.add(legL);
+  const legR=legL.clone();legR.position.x=.23;root.add(legR);
+  const footGeo=new THREE.CapsuleGeometry(.2,.28,5,8);
+  const footL=new THREE.Mesh(footGeo,dark);footL.scale.set(1,.62,1.35);footL.position.set(-.23,.22,.11);footL.castShadow=true;root.add(footL);
   const footR=footL.clone();footR.position.x=.23;root.add(footR);
+
   const ring=new THREE.Mesh(new THREE.TorusGeometry(.74,.018,8,48),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.4}));
   ring.rotation.x=Math.PI/2;ring.position.y=.04;root.add(ring);
   const label=document.createElement('div');label.className='agent-label';label.innerHTML=`<span class="agent-name-tag">${name}</span><span class="agent-state-tag">наблюдает</span>`;label.style.setProperty('--agent-color',`#${color.toString(16).padStart(6,'0')}`);document.body.appendChild(label);
-  return{name,color,root,body,halo,ring,head,eyeL,eyeR,mouth,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05,hunger:.2},abilities:[],brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:'',isOpenAI};
+  return{name,color,root,body,halo,ring,head,face,eyeL,eyeR,mouth,label,target:new THREE.Vector3(x,0,z),state:'observing',stateUntil:0,metrics:{survival:.74,autonomy:.52,learning:.18,exploration:.31,social:.08,decision:.63},memory:[],needs:{energy:.18,thirst:.22,curiosity:.62,social:.05,hunger:.2},abilities:[],brain:null,phase:Math.random()*10,recentTargets:[],routeHistory:[],lastRouteSignature:'',isOpenAI};
 }
 agents.push(makeAgent('OpenAI',agentColors.OpenAI,-22,-4));agents.push(makeAgent('Cloude',agentColors.Cloude,24,12));
 
@@ -341,9 +373,26 @@ function save(){const payload={experimentStart,running,events:eventLog,agents:ag
 
 function renderEvents(){const el=$('#events');el.innerHTML='';eventLog.slice(0,7).forEach(e=>{const row=document.createElement('div');row.className='event';row.innerHTML=`<time>${e.time}</time>${e.text}`;el.appendChild(row)});$('#eventCount').textContent=eventLog.length}
 function renderStats(){const host=$('#stats');host.innerHTML='';const labels=[['survival','ВЫЖИВАНИЕ'],['autonomy','АВТОНОМИЯ'],['learning','ОБУЧЕНИЕ'],['exploration','ИССЛЕДОВАНИЕ'],['social','СОЦИАЛЬНОСТЬ'],['decision','КАЧЕСТВО РЕШЕНИЙ']];agents.forEach(a=>{const card=document.createElement('div');card.className='agent-card';const head=document.createElement('div');head.className='agent-head';head.innerHTML=`<span class="agent-name" style="color:#${a.color.toString(16).padStart(6,'0')}">${a.name}</span><span class="agent-state">${a.state}</span>`;card.appendChild(head);const grid=document.createElement('div');grid.className='metric-grid';labels.forEach(([key,label])=>{const m=document.createElement('div');m.className='metric';const ring=document.createElement('div');ring.className='metric-ring';ring.style.setProperty('--p',`${Math.round(a.metrics[key]*100)}%`);ring.style.setProperty('--metric-color',`#${a.color.toString(16).padStart(6,'0')}`);ring.innerHTML=`<span>${Math.round(a.metrics[key]*100)}</span>`;m.appendChild(ring);const l=document.createElement('label');l.textContent=label;m.appendChild(l);grid.appendChild(m)});card.appendChild(grid);host.appendChild(card)})}
+function renderAgentMetrics(){
+  agents.forEach(a=>{
+    const p=a.name==='OpenAI'?'openai':'cloude';
+    const vals={
+      life:clamp(a.metrics.survival),
+      food:clamp(1-a.needs.hunger),
+      water:clamp(1-a.needs.thirst),
+      energy:clamp(1-a.needs.energy)
+    };
+    Object.entries(vals).forEach(([k,v])=>{
+      const bar=$(`#${p}${k[0].toUpperCase()+k.slice(1)}`),num=$(`#${p}${k[0].toUpperCase()+k.slice(1)}Value`);
+      if(bar)bar.style.width=`${Math.round(v*100)}%`;
+      if(num)num.textContent=Math.round(v*100);
+    });
+    const state=$(`#${p}State`);if(state)state.textContent=({resting:'отдыхает','seeking water':'ищет воду','observing another mind':'наблюдает',exploring:'исследует',wandering:'бродит',observing:'наблюдает'})[a.state]||a.state;
+  });
+}
 function updatePill(){const elapsed=Math.max(0,Date.now()-experimentStart);const day=Math.floor(elapsed/86400000)+1;const pillDay=$('#pillDay');if(pillDay)pillDay.textContent='ДЕНЬ '+String(day).padStart(3,'0')}
 function updateStartButton(){const b=$('#start');if(!b)return;const label=b.querySelector('.start-text');const icon=b.querySelector('.start-icon');if(label)label.textContent=running?'ПАУЗА':'СТАРТ';if(icon)icon.textContent=running?'Ⅱ':'▶';b.setAttribute('aria-label',running?'Поставить эксперимент на паузу':'Запустить эксперимент')}
-$('#start')?.addEventListener('click',()=>{running=!running;updateStartButton();addEvent(running?'Наблюдение возобновлено.':'Эксперимент поставлен на паузу.');save()});
+$('#start')?.addEventListener('click',()=>{running=!running;addEvent(running?'Наблюдение возобновлено.':'Эксперимент поставлен на паузу.');save()});
 $('#brainOrb')?.addEventListener('click',()=>{const p=$('#observatory');if(!p)return;p.classList.toggle('open');p.setAttribute('aria-hidden',String(!p.classList.contains('open')));if(p.classList.contains('open'))renderStats()});
 $('#closePanel')?.addEventListener('click',()=>$('#observatory')?.classList.remove('open'));$('#controlOrb')?.addEventListener('click',()=>$('#controlDock')?.classList.toggle('open'));
 $('#followA')?.addEventListener('click',()=>{cameraMode='follow';selectedAgent=agents[0]});$('#followB')?.addEventListener('click',()=>{cameraMode='follow';selectedAgent=agents[1]});$('#free')?.addEventListener('click',()=>{cameraMode='free';selectedAgent=null});$('#auto')?.addEventListener('click',()=>{cameraMode='auto';selectedAgent=null});
@@ -517,8 +566,8 @@ async function autonomousDialogue(){
 
 let last=performance.now(),saveTimer=0;
 function moscowWeatherIcon(code,isNight=false){if(code===0)return isNight?'🌙':'☀️';if(code===1)return isNight?'🌙':'🌤️';if(code===2)return '⛅';if(code===3)return '☁️';if(code===45||code===48)return '🌫️';if(code>=51&&code<=57)return '🌦️';if(code>=61&&code<=67)return '🌧️';if(code>=71&&code<=77)return '🌨️';if(code>=80&&code<=82)return '🌦️';if(code>=85&&code<=86)return '🌨️';if(code>=95)return '⛈️';return '🌤️'}
-function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);weather.rainLevel=lerp(weather.rainLevel,weather.rainTarget,.018);rainMaterial.opacity=.62*weather.rainLevel;rain.visible=weather.rainLevel>.03||weather.rain;if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);updateSeasonLeaves(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});const tempLabel=Number.isFinite(moscowTemperatureC)?((moscowTemperatureC>0?'+':'')+moscowTemperatureC+'°C'):'—°C';const weatherIcon=moscowWeatherIcon(moscowWeatherCode,world.night>.55);$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · '+tempLabel+' '+weatherIcon;updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
+function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);weather.rainLevel=lerp(weather.rainLevel,weather.rainTarget,.018);rainMaterial.opacity=.62*weather.rainLevel;rain.visible=weather.rainLevel>.03||weather.rain;if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);updateSeasonLeaves(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});const tempLabel=Number.isFinite(moscowTemperatureC)?((moscowTemperatureC>0?'+':'')+moscowTemperatureC+'°C'):'—°C';const weatherIcon=moscowWeatherIcon(moscowWeatherCode,world.night>.55);$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · '+tempLabel+' '+weatherIcon;updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}if(Math.floor(now/900)!==Math.floor((now-dt*1000)/900))renderAgentMetrics();saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
 addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
-renderEvents();renderStats();updatePill();updateStartButton();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,autumnProgress,autumnClimate,applySeason,seasonPalettes,trees,leafBed,bridge,caves,weather};
+renderEvents();renderStats();renderAgentMetrics();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,autumnProgress,autumnClimate,applySeason,seasonPalettes,trees,leafBed,bridge,caves,weather};
 requestAnimationFrame(tick);
