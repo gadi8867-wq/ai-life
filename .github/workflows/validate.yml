@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 22
       - name: One-off character body update
-        if: "github.ref == 'refs/heads/feature/ai-character-bodies' && github.event.head_commit.message != 'feat: add new AI character bodies and blinking faces'"
+        if: \${{ github.ref == 'refs/heads/ai-character-bodies' }}
         shell: bash
         run: |
           python3 - <<'PY'
