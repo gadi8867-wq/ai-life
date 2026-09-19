@@ -4,6 +4,11 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.m
 const $=q=>document.querySelector(q);
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const rand=(a,b)=>a+Math.random()*(b-a);
+// Permanent world seed: static terrain/object placement is reproducible across page reloads.
+const WORLD_SEED=0x41A1F27;
+function mulberry32(seed){return function(){let t=seed+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+const worldRandom=mulberry32(WORLD_SEED);
+const worldRand=(a,b)=>a+worldRandom()*(b-a);
 const dist2=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const lerp=(a,b,t)=>a+(b-a)*t;
 const SAVE_KEY='ai-life-2-v1',WORLD=120;
@@ -72,10 +77,10 @@ bankLeft.rotation.x=-Math.PI/2;bankLeft.rotation.z=.045;bankLeft.position.set(5-
 const bankRight=bankLeft.clone();bankRight.position.x=5+8.05;terrain.add(bankRight);
 const bankPebbles=new THREE.Group();bankPebbles.name='river-banks';
 for(let i=0;i<34;i++){
-  const z=rand(-53,53),riverX=5-z*.045,side=i%2===0?-1:1;
-  const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(rand(.09,.22),0),mat.rock);
-  pebble.position.set(riverX+side*rand(6.65,7.8),rand(.12,.25),z);
-  pebble.scale.y=rand(.45,.8);pebble.rotation.y=rand(0,Math.PI);pebble.castShadow=true;bankPebbles.add(pebble);
+  const z=worldRand(-53,53),riverX=5-z*.045,side=i%2===0?-1:1;
+  const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(worldRand(.09,.22),0),mat.rock);
+  pebble.position.set(riverX+side*worldRand(6.65,7.8),worldRand(.12,.25),z);
+  pebble.scale.y=worldRand(.45,.8);pebble.rotation.y=worldRand(0,Math.PI);pebble.castShadow=true;bankPebbles.add(pebble);
 }
 terrain.add(bankPebbles);
 
@@ -90,16 +95,16 @@ function seasonInfo(date=new Date()){const parts=new Intl.DateTimeFormat('en-US'
 const seasonPalettes={spring:{leafA:[.32,.58,.38],leafB:[.25,.48,.31],ground:[.29,.34,.23],grass:[.30,.49,.34],trunk:[.07,.30,.23]},summer:{leafA:[.34,.64,.36],leafB:[.29,.58,.32],ground:[.30,.37,.22],grass:[.31,.52,.34],trunk:[.08,.34,.27]},autumn:{leafA:[.095,.68,.34],leafB:[.045,.82,.52],ground:[.095,.30,.20],grass:[.20,.43,.28],trunk:[.055,.30,.19]},winter:{leafA:[.58,.12,.48],leafB:[.58,.10,.38],ground:[.58,.08,.72],grass:[.58,.10,.65],trunk:[.58,.12,.32]}};
 function seasonColor(hsl){const c=new THREE.Color();c.setHSL(hsl[0],hsl[1],hsl[2]);return c}
 function autumnClimate(date=new Date()){const p=autumnProgress(date),d=yearDay(date),weekly=.5+.5*Math.sin((d-248)/7*2*Math.PI),slow=.5+.5*Math.sin((d-252)/19*2*Math.PI);return{progress:p,temperature:lerp(16,5.5,p)+lerp(1.2,-1.2,slow)+lerp(.5,-.5,weekly),rainTarget:clamp(.26+.42*p+.14*slow+.06*weekly),wind:lerp(.35,1.05,p)}}
-const seasonLeaves=(()=>{const count=150,positions=new Float32Array(count*3),drift=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=rand(-58,58);positions[i*3+1]=rand(2,18);positions[i*3+2]=rand(-58,58);drift[i*3]=rand(-.35,.35);drift[i*3+1]=rand(.65,1.35);drift[i*3+2]=rand(-.25,.25)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const points=new THREE.Points(geometry,new THREE.PointsMaterial({color:0xe0a04b,size:.14,transparent:true,opacity:.72,depthWrite:false}));points.visible=false;scene.add(points);return{points,positions,drift}})();
-const leafBed=(()=>{const count=620,positions=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=rand(-55,55);positions[i*3+1]=.035;positions[i*3+2]=rand(-55,55)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const material=new THREE.PointsMaterial({color:0xb06a35,size:.16,transparent:true,opacity:0,depthWrite:false});const points=new THREE.Points(geometry,material);scene.add(points);return points})();
+const seasonLeaves=(()=>{const count=150,positions=new Float32Array(count*3),drift=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=worldRand(-58,58);positions[i*3+1]=worldRand(2,18);positions[i*3+2]=worldRand(-58,58);drift[i*3]=worldRand(-.35,.35);drift[i*3+1]=worldRand(.65,1.35);drift[i*3+2]=worldRand(-.25,.25)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const points=new THREE.Points(geometry,new THREE.PointsMaterial({color:0xe0a04b,size:.14,transparent:true,opacity:.72,depthWrite:false}));points.visible=false;scene.add(points);return{points,positions,drift}})();
+const leafBed=(()=>{const count=620,positions=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=worldRand(-55,55);positions[i*3+1]=.035;positions[i*3+2]=worldRand(-55,55)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const material=new THREE.PointsMaterial({color:0xb06a35,size:.16,transparent:true,opacity:0,depthWrite:false});const points=new THREE.Points(geometry,material);scene.add(points);return points})();
 function applySeason(date=new Date()){const s=seasonInfo(date),p=s.key==='autumn'?s.progress:0,palette=seasonPalettes[s.key],climate=autumnClimate(date);trees.forEach(t=>t.foliage.forEach((mesh,i)=>{if(s.key==='autumn'){const warm=clamp(.22+t.warmBias*.32+p*.72),baseHue=i%2===0?.30:.20,hue=lerp(baseHue,.055,warm),sat=lerp(.42,.82,warm),light=lerp(.28,.43,warm);mesh.material.color.copy(seasonColor([hue,sat,light]))}else{const base=i%2===0?palette.leafA:palette.leafB;mesh.material.color.copy(seasonColor([base[0],base[1],clamp(base[2]+(t.warmBias-.5)*.035,.12,.62)]))}}));mat.ground.color.copy(seasonColor(palette.ground));mat.grass.color.copy(seasonColor(palette.grass));mat.trunk.color.copy(seasonColor(palette.trunk));seasonLeaves.points.visible=s.key==='autumn';seasonLeaves.points.material.opacity=s.key==='autumn'?lerp(.38,.86,p):0;leafBed.material.opacity=s.key==='autumn'?lerp(.10,.56,p):0;seasonLeaves.points.material.size=lerp(.11,.18,p);leafBed.material.size=lerp(.10,.19,p);const seasonalRain=s.key==='autumn'?climate.rainTarget:s.key==='winter'?.3:s.key==='spring'?.2:.1;return{...s,temperatureC:climate.temperature,rainTarget:seasonalRain,leafAccumulation:p}}
 function updateSeasonLeaves(dt){if(!seasonLeaves.points.visible)return;const p=seasonLeaves.positions,d=seasonLeaves.drift;for(let i=0;i<p.length/3;i++){p[i*3]+=(d[i*3]+weather.wind*.12)*dt;p[i*3+1]-=d[i*3+1]*dt;p[i*3+2]+=(d[i*3+2]+weather.wind*.05)*dt;if(p[i*3+1]<.2){p[i*3+1]=rand(9,18);p[i*3]=rand(-58,58);p[i*3+2]=rand(-58,58)}}seasonLeaves.points.geometry.attributes.position.needsUpdate=true;seasonLeaves.points.rotation.y+=dt*.015}
 function addTree(x,z,s=1,v=0){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);const t=new THREE.Mesh(new THREE.CylinderGeometry(.25,.38,2.8,7),mat.trunk);t.position.y=1.4;t.castShadow=true;g.add(t);const foliage=[];const makeCanopy=(scale,px,py,pz)=>{const mesh=new THREE.Mesh(new THREE.DodecahedronGeometry(1.7,1),new THREE.MeshStandardMaterial({color:0x2e6040,roughness:.9,flatShading:true}));mesh.position.set(px,py,pz);mesh.scale.set(scale,scale*1.05,scale*.94);mesh.castShadow=true;g.add(mesh);foliage.push(mesh)};makeCanopy(1.18,0,3.15,0);makeCanopy(.72,-.85,3.85,.18);makeCanopy(.68,.8,4.0,-.18);if(v%4===0)makeCanopy(.5,.1,4.75,.25);trees.push({group:g,foliage,warmBias:((v*37)%100)/100});terrain.add(g)}
-function addRock(x,z,s=1){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(.75),mat.rock);r.position.set(x,.45*s,z);r.scale.set(s*rand(.8,1.35),s*rand(.65,1),s*rand(.75,1.25));r.rotation.set(rand(-.3,.3),rand(0,Math.PI),rand(-.2,.2));r.castShadow=true;terrain.add(r)}
-function addGrass(x,z,s=1){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.ConeGeometry(.055,rand(.35,.65),4),mat.grass);b.position.set(rand(-.22,.22),b.geometry.parameters.height/2,rand(-.22,.22));b.rotation.z=rand(-.25,.25);g.add(b)}terrain.add(g)}
-for(let i=0;i<68;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addTree(x,z,rand(.72,1.42),i)}
-for(let i=0;i<38;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addRock(x,z,rand(.45,1.15))}
-for(let i=0;i<145;i++){let x=rand(-55,55),z=rand(-55,55);if(Math.abs(x-5)<7)x+=x<5?-8:8;addGrass(x,z,rand(.65,1.35))}
+function addRock(x,z,s=1){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(.75),mat.rock);r.position.set(x,.45*s,z);r.scale.set(s*worldRand(.8,1.35),s*worldRand(.65,1),s*worldRand(.75,1.25));r.rotation.set(worldRand(-.3,.3),worldRand(0,Math.PI),worldRand(-.2,.2));r.castShadow=true;terrain.add(r)}
+function addGrass(x,z,s=1){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.ConeGeometry(.055,worldRand(.35,.65),4),mat.grass);b.position.set(worldRand(-.22,.22),b.geometry.parameters.height/2,worldRand(-.22,.22));b.rotation.z=worldRand(-.25,.25);g.add(b)}terrain.add(g)}
+for(let i=0;i<68;i++){let x=worldRand(-52,52),z=worldRand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addTree(x,z,worldRand(.72,1.42),i)}
+for(let i=0;i<38;i++){let x=worldRand(-52,52),z=worldRand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addRock(x,z,worldRand(.45,1.15))}
+for(let i=0;i<145;i++){let x=worldRand(-55,55),z=worldRand(-55,55);if(Math.abs(x-5)<7)x+=x<5?-8:8;addGrass(x,z,worldRand(.65,1.35))}
 
 /* ---------- Cave shelters / quiet places ---------- */
 const caves=new THREE.Group();caves.name='caves';terrain.add(caves);
