@@ -291,7 +291,7 @@ async function updateMoscowTemperature(force=false){
     if(Number.isFinite(value)){moscowTemperatureC=Math.round(value);moscowWeatherFetchedAt=now;const el=$('#moscowTemp');if(el)el.textContent=(moscowTemperatureC>0?'+':'')+moscowTemperatureC+'°C'}
   }catch(error){addEvent('Не удалось обновить температуру Москвы: '+error.message)}
 }
-updateMoscowTemperature(true);
+updateMoscowTemperature(true);setInterval(()=>updateMoscowTemperature(),600000);
 const experimentStart=saved?.experimentStart||Date.now();const running=true;let cameraMode='auto',selectedAgent=null,lastDecision=0,eventLog=saved?.events||[];
 if(saved?.agents)saved.agents.forEach(s=>{const a=agents.find(x=>x.name===s.name);if(!a)return;a.root.position.set(s.x,0,s.z);if(!isWalkable(a.root.position.x,a.root.position.z)){const safe=chooseSafeSpawn(a.root.position.x,a.root.position.z);a.root.position.set(safe.x,0,safe.z);a.target.copy(a.root.position)}a.metrics={...a.metrics,...s.metrics};a.memory=s.memory||[];a.abilities=s.abilities||[];a.needs={...a.needs,...s.needs}});
 function addEvent(text,agent=null){const item={time:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),text,agent};eventLog=[item,...eventLog].slice(0,10);renderEvents()}
