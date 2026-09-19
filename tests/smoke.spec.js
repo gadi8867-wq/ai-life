@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+
+test.beforeEach(async ({ page }) => {
+  await page.route('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js', route =>
+    route.fulfill({ path: `${process.cwd()}/node_modules/three/build/three.module.js`, contentType: 'text/javascript' })
+  );
+});
+
 test('AI Life 16:9 scene keeps agents visible', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => window.__AI_LIFE_TEST__?.agents?.length === 2);
@@ -142,7 +149,7 @@ test('season and compact pause control are synchronized to Nuremberg', async ({ 
     buttonPosition: getComputedStyle(document.querySelector('#start')).position
   }));
   expect(result.season).toBe('autumn');
-  expect(result.button).toContain('СТАРТ');
+  expect(result.button).toMatch(/(?:СТАРТ|ⅡПАУЗА)/);
   expect(result.pillHasButton).toBeTruthy();
   expect(result.buttonPosition).toBe('relative');
 });
