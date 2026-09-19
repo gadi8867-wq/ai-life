@@ -279,16 +279,16 @@ async function pollDonationEvents(){
 /* ---------- Persistence ---------- */
 const saved=(()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'null')}catch{return null}})();
 
-let moscowTemperatureC=null,moscowWeatherFetchedAt=0;
+let moscowTemperatureC=null,moscowWeatherCode=null,moscowWeatherFetchedAt=0;
 async function updateMoscowTemperature(force=false){
   const now=Date.now();
   if(!force&&now-moscowWeatherFetchedAt<600000)return;
   try{
-    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=55.7558&longitude=37.6173&current=temperature_2m&timezone=Europe%2FMoscow');
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=55.7558&longitude=37.6173&current=temperature_2m,weather_code&timezone=Europe%2FMoscow');
     if(!r.ok)throw new Error('weather '+r.status);
     const data=await r.json();
-    const value=Number(data?.current?.temperature_2m);
-    if(Number.isFinite(value)){moscowTemperatureC=Math.round(value);moscowWeatherFetchedAt=now;const el=$('#moscowTemp');if(el)el.textContent=(moscowTemperatureC>0?'+':'')+moscowTemperatureC+'°C'}
+    const value=Number(data?.current?.temperature_2m);const code=Number(data?.current?.weather_code);
+    if(Number.isFinite(value)){moscowTemperatureC=Math.round(value);moscowWeatherCode=Number.isFinite(code)?code:null;moscowWeatherFetchedAt=now;}
   }catch(error){addEvent('Не удалось обновить температуру Москвы: '+error.message)}
 }
 updateMoscowTemperature(true);setInterval(()=>updateMoscowTemperature(),600000);
@@ -475,7 +475,8 @@ async function autonomousDialogue(){
 }
 
 let last=performance.now(),saveTimer=0;
-function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);weather.rainLevel=lerp(weather.rainLevel,weather.rainTarget,.018);rainMaterial.opacity=.62*weather.rainLevel;rain.visible=weather.rainLevel>.03||weather.rain;if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);updateSeasonLeaves(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});const tempLabel=Number.isFinite(moscowTemperatureC)?((moscowTemperatureC>0?'+':'')+moscowTemperatureC+'°C'):'—°C';$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · '+tempLabel;$('#statusDetail').textContent=world.night>.55?`${world.season.emoji} Сейчас ночь · сезонная темнота синхронизирована с Нюрнбергом.`:`${world.season.emoji} ${world.season.name} · солнечный день синхронизирован с Нюрнбергом.`;updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
+function moscowWeatherIcon(code,isNight=false){if(code===0)return isNight?'🌙':'☀️';if(code===1)return isNight?'🌙':'🌤️';if(code===2)return '⛅';if(code===3)return '☁️';if(code===45||code===48)return '🌫️';if(code>=51&&code<=57)return '🌦️';if(code>=61&&code<=67)return '🌧️';if(code>=71&&code<=77)return '🌨️';if(code>=80&&code<=82)return '🌦️';if(code>=85&&code<=86)return '🌨️';if(code>=95)return '⛈️';return '🌤️'}
+function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);weather.rainLevel=lerp(weather.rainLevel,weather.rainTarget,.018);rainMaterial.opacity=.62*weather.rainLevel;rain.visible=weather.rainLevel>.03||weather.rain;if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);updateSeasonLeaves(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});const tempLabel=Number.isFinite(moscowTemperatureC)?((moscowTemperatureC>0?'+':'')+moscowTemperatureC+'°C'):'—°C';const weatherIcon=moscowWeatherIcon(moscowWeatherCode,world.night>.55);$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · '+tempLabel+' '+weatherIcon;updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
 addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
 renderEvents();renderStats();updatePill();updateStartButton();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,autumnProgress,autumnClimate,applySeason,seasonPalettes,trees,leafBed,bridge,caves,weather};
