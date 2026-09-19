@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 22
       - name: One-off character body update
-        if: github.ref == 'refs/heads/feature/ai-character-bodies' && github.event.head_commit.message != 'feat: add new AI character bodies and blinking faces'
+        if: "github.ref == 'refs/heads/feature/ai-character-bodies' && github.event.head_commit.message != 'feat: add new AI character bodies and blinking faces'"
         shell: bash
         run: |
           python3 - <<'PY'
@@ -23,6 +23,8 @@ jobs:
           import re
           p=Path('js/main.js')
           s=p.read_text()
+          if "const isOpenAI" in s:
+              raise SystemExit(0)
           new = r'''function makeAgent(name,color,x,z){
   const root=new THREE.Group();
   root.position.set(x,0,z);scene.add(root);
