@@ -266,7 +266,7 @@ function makeAgent(name,color,x,z){
 
   const label=document.createElement('div');
   label.className='agent-label';
-  label.innerHTML=\`<span class="agent-name-tag">\${name}</span><span class="agent-state-tag">наблюдает</span>\`;
+  label.innerHTML='<span class="agent-name-tag">' + name + '</span><span class="agent-state-tag">наблюдает</span>';
   label.style.setProperty('--agent-color',\`#\${color.toString(16).padStart(6,'0')}\`);
   document.body.appendChild(label);
 
