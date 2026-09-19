@@ -278,6 +278,20 @@ async function pollDonationEvents(){
 }
 /* ---------- Persistence ---------- */
 const saved=(()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'null')}catch{return null}})();
+
+let moscowTemperatureC=null,moscowWeatherFetchedAt=0;
+async function updateMoscowTemperature(force=false){
+  const now=Date.now();
+  if(!force&&now-moscowWeatherFetchedAt<600000)return;
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=55.7558&longitude=37.6173&current=temperature_2m&timezone=Europe%2FMoscow');
+    if(!r.ok)throw new Error('weather '+r.status);
+    const data=await r.json();
+    const value=Number(data?.current?.temperature_2m);
+    if(Number.isFinite(value)){moscowTemperatureC=Math.round(value);moscowWeatherFetchedAt=now;const el=$('#moscowTemp');if(el)el.textContent=(moscowTemperatureC>0?'+':'')+moscowTemperatureC+'°C'}
+  }catch(error){addEvent('Не удалось обновить температуру Москвы: '+error.message)}
+}
+updateMoscowTemperature(true);
 const experimentStart=saved?.experimentStart||Date.now();const running=true;let cameraMode='auto',selectedAgent=null,lastDecision=0,eventLog=saved?.events||[];
 if(saved?.agents)saved.agents.forEach(s=>{const a=agents.find(x=>x.name===s.name);if(!a)return;a.root.position.set(s.x,0,s.z);if(!isWalkable(a.root.position.x,a.root.position.z)){const safe=chooseSafeSpawn(a.root.position.x,a.root.position.z);a.root.position.set(safe.x,0,safe.z);a.target.copy(a.root.position)}a.metrics={...a.metrics,...s.metrics};a.memory=s.memory||[];a.abilities=s.abilities||[];a.needs={...a.needs,...s.needs}});
 function addEvent(text,agent=null){const item={time:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),text,agent};eventLog=[item,...eventLog].slice(0,10);renderEvents()}
