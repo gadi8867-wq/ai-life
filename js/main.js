@@ -200,21 +200,26 @@ function makeAgent(name,color,x,z){
   const triangleGlow=new THREE.Mesh(new THREE.ShapeGeometry(triangleGlowShape),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.98}));
   triangleGlow.position.set(0,1.31,.565);root.add(triangleGlow);
 
-  /* Big rounded helmet-like head. */
-  const head=new THREE.Mesh(makeRoundedRect(1.2,.92,.23,.34,.075),shell);
+  /* Round reference head: a compact spherical shell, like the supplied robot. */
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.68,32,24),shell);
+  head.scale.set(1.0,1.0,.9);
   head.position.set(0,2.08,.02);head.castShadow=true;root.add(head);
-  const face=new THREE.Mesh(makeRoundedRect(.97,.66,.17,.055,.026),dark);
-  face.position.set(0,2.08,.225);root.add(face);
-  const eyeGeo=new THREE.BoxGeometry(.17,.17,.055);
-  const eyeL=new THREE.Mesh(eyeGeo,eyeMat);eyeL.position.set(-.225,2.12,.27);root.add(eyeL);
-  const eyeR=eyeL.clone();eyeR.position.x=.225;root.add(eyeR);
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.22,.035,.045),eyeMat);mouth.position.set(0,1.91,.27);root.add(mouth);
 
-  /* Circular ear modules. */
+  /* Curved black face panel sits into the front of the round shell. */
+  const face=new THREE.Mesh(new THREE.SphereGeometry(.54,28,20),dark);
+  face.scale.set(.88,.70,.22);
+  face.position.set(0,2.08,.57);root.add(face);
+
+  const eyeGeo=new THREE.BoxGeometry(.17,.17,.045);
+  const eyeL=new THREE.Mesh(eyeGeo,eyeMat);eyeL.position.set(-.225,2.12,.69);root.add(eyeL);
+  const eyeR=eyeL.clone();eyeR.position.x=.225;root.add(eyeR);
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.22,.035,.035),eyeMat);mouth.position.set(0,1.91,.69);root.add(mouth);
+
+  /* Circular ear modules tucked into the sides of the round head. */
   const earGeo=new THREE.TorusGeometry(.19,.038,8,24);
   const earMat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.95});
-  const earL=new THREE.Mesh(earGeo,earMat);earL.rotation.y=Math.PI/2;earL.position.set(-.63,2.08,.02);root.add(earL);
-  const earR=earL.clone();earR.position.x=.63;root.add(earR);
+  const earL=new THREE.Mesh(earGeo,earMat);earL.rotation.y=Math.PI/2;earL.position.set(-.67,2.08,.02);root.add(earL);
+  const earR=earL.clone();earR.position.x=.67;root.add(earR);
 
   /* Chunky articulated arms. */
   const shoulderGeo=new THREE.SphereGeometry(.235,14,10);
