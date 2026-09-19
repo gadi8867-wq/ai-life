@@ -182,15 +182,17 @@ function makeAgent(name,color,x,z){
   const halo=new THREE.Mesh(new THREE.TorusGeometry(.66,.035,10,64),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.95}));
   halo.rotation.x=Math.PI/2;halo.position.y=2.78;root.add(halo);
 
-  /* Rounded armor torso. */
-  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.5,.72,8,18),shell);
-  body.scale.set(1.02,1.06,.82);body.position.y=1.22;body.castShadow=true;root.add(body);
-  const waist=new THREE.Mesh(new THREE.CapsuleGeometry(.3,.18,6,12),dark);
-  waist.scale.set(1.05,.7,.82);waist.position.y=.82;waist.castShadow=true;root.add(waist);
+  /* Compact reference torso: broad rounded chest, softly curved corners, narrower lower body. */
+  const body=new THREE.Mesh(makeRoundedRect(1.10,.92,.20,.58,.085),shell);
+  body.scale.set(1.0,1.0,.94);body.position.set(0,1.25,.02);body.castShadow=true;root.add(body);
 
-  /* Embedded inverted triangle on the chest. */
-  const chestPlate=new THREE.Mesh(new THREE.CapsuleGeometry(.34,.38,6,12),dark);
-  chestPlate.scale.set(1.03,.92,.38);chestPlate.position.set(0,1.31,.43);chestPlate.castShadow=true;root.add(chestPlate);
+  /* Soft dark waist joint, kept small so the torso reads as one rounded shell. */
+  const waist=new THREE.Mesh(new THREE.CapsuleGeometry(.29,.16,6,12),dark);
+  waist.scale.set(1.02,.72,.78);waist.position.set(0,.80,.01);waist.castShadow=true;root.add(waist);
+
+  /* Embedded inverted triangle on the front of the rounded chest. */
+  const chestPlate=new THREE.Mesh(makeRoundedRect(.48,.48,.12,.08,.035),dark);
+  chestPlate.scale.set(1,.95,.72);chestPlate.position.set(0,1.30,.34);root.add(chestPlate);
   const triangleBase=new THREE.Shape();
   triangleBase.moveTo(-.245,.17);triangleBase.lineTo(.245,.17);triangleBase.lineTo(0,-.235);triangleBase.closePath();
   const triangleGlowShape=new THREE.Shape();
