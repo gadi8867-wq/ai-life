@@ -92,9 +92,45 @@ function seasonColor(hsl){const c=new THREE.Color();c.setHSL(hsl[0],hsl[1],hsl[2
 function autumnClimate(date=new Date()){const p=autumnProgress(date),d=yearDay(date),weekly=.5+.5*Math.sin((d-248)/7*2*Math.PI),slow=.5+.5*Math.sin((d-252)/19*2*Math.PI);return{progress:p,temperature:lerp(16,5.5,p)+lerp(1.2,-1.2,slow)+lerp(.5,-.5,weekly),rainTarget:clamp(.26+.42*p+.14*slow+.06*weekly),wind:lerp(.35,1.05,p)}}
 const seasonLeaves=(()=>{const count=150,positions=new Float32Array(count*3),drift=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=rand(-58,58);positions[i*3+1]=rand(2,18);positions[i*3+2]=rand(-58,58);drift[i*3]=rand(-.35,.35);drift[i*3+1]=rand(.65,1.35);drift[i*3+2]=rand(-.25,.25)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const points=new THREE.Points(geometry,new THREE.PointsMaterial({color:0xe0a04b,size:.14,transparent:true,opacity:.72,depthWrite:false}));points.visible=false;scene.add(points);return{points,positions,drift}})();
 const leafBed=(()=>{const count=620,positions=new Float32Array(count*3);for(let i=0;i<count;i++){positions[i*3]=rand(-55,55);positions[i*3+1]=.035;positions[i*3+2]=rand(-55,55)}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const material=new THREE.PointsMaterial({color:0xb06a35,size:.16,transparent:true,opacity:0,depthWrite:false});const points=new THREE.Points(geometry,material);scene.add(points);return points})();
-function applySeason(date=new Date()){const s=seasonInfo(date),p=s.key==='autumn'?s.progress:0,palette=seasonPalettes[s.key],climate=autumnClimate(date);trees.forEach(t=>t.foliage.forEach((mesh,i)=>{if(s.key==='autumn'){const earlyAutumn=clamp(p*.72),warm=clamp(t.warmBias*.38+earlyAutumn),baseHue=i%2===0?.30:.20,hue=lerp(baseHue,.055,warm),sat=lerp(.46,.86,warm),light=lerp(.27,.44,warm);mesh.material.color.copy(seasonColor([hue,sat,light]))}else{const base=i%2===0?palette.leafA:palette.leafB;mesh.material.color.copy(seasonColor([base[0],base[1],clamp(base[2]+(t.warmBias-.5)*.035,.12,.62)]))}}));mat.ground.color.copy(seasonColor(palette.ground));mat.grass.color.copy(seasonColor(palette.grass));mat.trunk.color.copy(seasonColor(palette.trunk));seasonLeaves.points.visible=s.key==='autumn';seasonLeaves.points.material.opacity=s.key==='autumn'?lerp(.34,.82,p):0;leafBed.material.opacity=s.key==='autumn'?lerp(.07,.52,p):0;seasonLeaves.points.material.size=lerp(.11,.18,p);leafBed.material.size=lerp(.10,.19,p);return{...s,temperatureC:climate.temperature,rainTarget:climate.rainTarget,leafAccumulation:p}}
+function applySeason(date=new Date()){const s=seasonInfo(date),p=s.key==='autumn'?s.progress:0,palette=seasonPalettes[s.key],climate=autumnClimate(date);trees.forEach(t=>t.foliage.forEach((mesh,i)=>{if(s.key==='autumn'){const earlyAutumn=clamp(p*.95),warm=clamp(t.warmBias*.42+earlyAutumn),baseHue=i%2===0?.30:.22,hue=lerp(baseHue,.07,warm),sat=lerp(.48,.82,warm),light=lerp(.27,.41,warm);mesh.material.color.copy(seasonColor([hue,sat,light]))}else{const base=i%2===0?palette.leafA:palette.leafB;mesh.material.color.copy(seasonColor([base[0],base[1],clamp(base[2]+(t.warmBias-.5)*.035,.12,.62)]))}}));mat.ground.color.copy(seasonColor(palette.ground));mat.grass.color.copy(seasonColor(palette.grass));mat.trunk.color.copy(seasonColor(palette.trunk));seasonLeaves.points.visible=s.key==='autumn';seasonLeaves.points.material.opacity=s.key==='autumn'?lerp(.34,.82,p):0;leafBed.material.opacity=s.key==='autumn'?lerp(.07,.52,p):0;seasonLeaves.points.material.size=lerp(.11,.18,p);leafBed.material.size=lerp(.10,.19,p);return{...s,temperatureC:climate.temperature,rainTarget:climate.rainTarget,leafAccumulation:p}}
 function updateSeasonLeaves(dt){if(!seasonLeaves.points.visible)return;const p=seasonLeaves.positions,d=seasonLeaves.drift;for(let i=0;i<p.length/3;i++){p[i*3]+=(d[i*3]+weather.wind*.12)*dt;p[i*3+1]-=d[i*3+1]*dt;p[i*3+2]+=(d[i*3+2]+weather.wind*.05)*dt;if(p[i*3+1]<.2){p[i*3+1]=rand(9,18);p[i*3]=rand(-58,58);p[i*3+2]=rand(-58,58)}}seasonLeaves.points.geometry.attributes.position.needsUpdate=true;seasonLeaves.points.rotation.y+=dt*.015}
-function addTree(x,z,s=1,v=0){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);const t=new THREE.Mesh(new THREE.CylinderGeometry(.25,.38,2.8,7),mat.trunk);t.position.y=1.4;t.castShadow=true;g.add(t);const foliage=[];const c=new THREE.Mesh(new THREE.DodecahedronGeometry(1.7,1),new THREE.MeshStandardMaterial({color:0x2e6040,roughness:.9,flatShading:true}));c.position.y=3.15;c.scale.y=1.18;c.castShadow=true;g.add(c);foliage.push(c);if(v%3===0){const c2=c.clone();c2.material=c.material.clone();c2.scale.setScalar(.68);c2.position.set(.75,4.15,-.25);g.add(c2);foliage.push(c2)}trees.push({group:g,foliage,warmBias:((v*37)%100)/100});terrain.add(g)}
+function addTree(x,z,s=1,v=0){
+  const g=new THREE.Group();
+  g.position.set(x,0,z);
+  g.scale.setScalar(s);
+  const trunkMat=mat.trunk.clone();
+  const t=new THREE.Mesh(new THREE.CylinderGeometry(.24,.4,3.0,8),trunkMat);
+  t.position.y=1.5;
+  t.castShadow=true;
+  g.add(t);
+  const foliage=[];
+  const clusterData=[
+    [0,3.45,0,1.55,1.18,1.38,0],
+    [-.78,3.95,.08,.95,.88,.96,.35],
+    [.82,4.02,-.12,1.02,.9,1.0,.7],
+    [.08,4.55,-.18,.78,.72,.8,1.05]
+  ];
+  clusterData.forEach(([px,py,pz,sx,sy,sz,rot],i)=>{
+    const material=new THREE.MeshStandardMaterial({color:i%2?0x426d4c:0x2e6040,roughness:.86,flatShading:true});
+    const c=new THREE.Mesh(new THREE.DodecahedronGeometry(1.65,1),material);
+    c.position.set(px,py,pz);
+    c.scale.set(sx,sy,sz);
+    c.rotation.y=rot;
+    c.castShadow=true;
+    g.add(c);
+    foliage.push(c);
+  });
+  for(const side of [-1,1]){
+    const branch=new THREE.Mesh(new THREE.CylinderGeometry(.075,.11,.95,7),trunkMat);
+    branch.position.set(side*.48,2.35,0);
+    branch.rotation.z=side*.62;
+    branch.rotation.y=side*.22;
+    branch.castShadow=true;
+    g.add(branch);
+  }
+  trees.push({group:g,foliage,warmBias:((v*37)%100)/100});
+  terrain.add(g);
+}
 function addRock(x,z,s=1){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(.75),mat.rock);r.position.set(x,.45*s,z);r.scale.set(s*rand(.8,1.35),s*rand(.65,1),s*rand(.75,1.25));r.rotation.set(rand(-.3,.3),rand(0,Math.PI),rand(-.2,.2));r.castShadow=true;terrain.add(r)}
 function addGrass(x,z,s=1){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.ConeGeometry(.055,rand(.35,.65),4),mat.grass);b.position.set(rand(-.22,.22),b.geometry.parameters.height/2,rand(-.22,.22));b.rotation.z=rand(-.25,.25);g.add(b)}terrain.add(g)}
 for(let i=0;i<68;i++){let x=rand(-52,52),z=rand(-52,52);if(Math.abs(x-5)<9)x+=x<5?-10:10;addTree(x,z,rand(.72,1.42),i)}
@@ -277,15 +313,14 @@ async function pollDonationEvents(){
 }
 /* ---------- Persistence ---------- */
 const saved=(()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'null')}catch{return null}})();
-const experimentStart=saved?.experimentStart||Date.now();let running=saved?.running??true;let cameraMode='auto',selectedAgent=null,lastDecision=0,eventLog=saved?.events||[];
+const experimentStart=saved?.experimentStart||Date.now();let running=true;let cameraMode='auto',selectedAgent=null,lastDecision=0,eventLog=saved?.events||[];
 if(saved?.agents)saved.agents.forEach(s=>{const a=agents.find(x=>x.name===s.name);if(!a)return;a.root.position.set(s.x,0,s.z);if(!isWalkable(a.root.position.x,a.root.position.z)){const safe=chooseSafeSpawn(a.root.position.x,a.root.position.z);a.root.position.set(safe.x,0,safe.z);a.target.copy(a.root.position)}a.metrics={...a.metrics,...s.metrics};a.memory=s.memory||[];a.abilities=s.abilities||[];a.needs={...a.needs,...s.needs}});
 function addEvent(text,agent=null){const item={time:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),text,agent};eventLog=[item,...eventLog].slice(0,10);renderEvents()}
-function save(){const payload={experimentStart,running,events:eventLog,agents:agents.map(a=>({name:a.name,x:a.root.position.x,z:a.root.position.z,metrics:a.metrics,memory:a.memory.slice(-20),needs:a.needs,abilities:a.abilities}))};try{localStorage.setItem(SAVE_KEY,JSON.stringify(payload))}catch{}}
+function save(){const payload={experimentStart,events:eventLog,agents:agents.map(a=>({name:a.name,x:a.root.position.x,z:a.root.position.z,metrics:a.metrics,memory:a.memory.slice(-20),needs:a.needs,abilities:a.abilities}))};try{localStorage.setItem(SAVE_KEY,JSON.stringify(payload))}catch{}}
 
 function renderEvents(){const el=$('#events');el.innerHTML='';eventLog.slice(0,7).forEach(e=>{const row=document.createElement('div');row.className='event';row.innerHTML=`<time>${e.time}</time>${e.text}`;el.appendChild(row)});$('#eventCount').textContent=eventLog.length}
 function renderStats(){const host=$('#stats');host.innerHTML='';const labels=[['survival','ВЫЖИВАНИЕ'],['autonomy','АВТОНОМИЯ'],['learning','ОБУЧЕНИЕ'],['exploration','ИССЛЕДОВАНИЕ'],['social','СОЦИАЛЬНОСТЬ'],['decision','КАЧЕСТВО РЕШЕНИЙ']];agents.forEach(a=>{const card=document.createElement('div');card.className='agent-card';const head=document.createElement('div');head.className='agent-head';head.innerHTML=`<span class="agent-name" style="color:#${a.color.toString(16).padStart(6,'0')}">${a.name}</span><span class="agent-state">${a.state}</span>`;card.appendChild(head);const grid=document.createElement('div');grid.className='metric-grid';labels.forEach(([key,label])=>{const m=document.createElement('div');m.className='metric';const ring=document.createElement('div');ring.className='metric-ring';ring.style.setProperty('--p',`${Math.round(a.metrics[key]*100)}%`);ring.style.setProperty('--metric-color',`#${a.color.toString(16).padStart(6,'0')}`);ring.innerHTML=`<span>${Math.round(a.metrics[key]*100)}</span>`;m.appendChild(ring);const l=document.createElement('label');l.textContent=label;m.appendChild(l);grid.appendChild(m)});card.appendChild(grid);host.appendChild(card)})}
-function updatePill(){const elapsed=Math.max(0,Date.now()-experimentStart);const day=Math.floor(elapsed/86400000)+1;$('#pillDay').textContent='ДЕНЬ '+String(day).padStart(3,'0');const b=$('#start');if(b){b.classList.toggle('running',running);const icon=b.querySelector('.start-icon'),label=b.querySelector('.start-text');if(icon)icon.textContent=running?'Ⅱ':'▶';if(label)label.textContent=running?'ПАУЗА':'СТАРТ';b.setAttribute('aria-label',running?'Поставить эксперимент на паузу':'Запустить эксперимент')}}
-$('#start')?.addEventListener('click',()=>{running=!running;addEvent(running?'Эксперимент продолжен.':'Эксперимент поставлен на паузу.');save();updatePill()})
+function updateExperimentDay(){const elapsed=Math.max(0,Date.now()-experimentStart);const day=Math.floor(elapsed/86400000)+1;const el=$('#pillDay');if(el)el.textContent='ДЕНЬ '+String(day).padStart(3,'0')}
 $('#brainOrb')?.addEventListener('click',()=>{const p=$('#observatory');if(!p)return;p.classList.toggle('open');p.setAttribute('aria-hidden',String(!p.classList.contains('open')));if(p.classList.contains('open'))renderStats()});
 $('#closePanel')?.addEventListener('click',()=>$('#observatory')?.classList.remove('open'));$('#controlOrb')?.addEventListener('click',()=>$('#controlDock')?.classList.toggle('open'));
 $('#followA')?.addEventListener('click',()=>{cameraMode='follow';selectedAgent=agents[0]});$('#followB')?.addEventListener('click',()=>{cameraMode='follow';selectedAgent=agents[1]});$('#free')?.addEventListener('click',()=>{cameraMode='free';selectedAgent=null});$('#auto')?.addEventListener('click',()=>{cameraMode='auto';selectedAgent=null});
@@ -459,8 +494,8 @@ async function autonomousDialogue(){
 }
 
 let last=performance.now(),saveTimer=0;
-function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);weather.rainLevel=lerp(weather.rainLevel,weather.rainTarget,.018);rainMaterial.opacity=.62*weather.rainLevel;rain.visible=weather.rainLevel>.03||weather.rain;if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);updateSeasonLeaves(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · Наблюдение за миром';$('#statusDetail').textContent=world.night>.55?`${world.season.emoji} Сейчас ночь · сезонная темнота синхронизирована с Нюрнбергом.`:`${world.season.emoji} ${world.season.name} · солнечный день синхронизирован с Нюрнбергом.`;updatePill();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
+function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;const realDate=new Date();const world=applySolarLighting(realDate);weather.rainLevel=lerp(weather.rainLevel,weather.rainTarget,.018);rainMaterial.opacity=.62*weather.rainLevel;rain.visible=weather.rainLevel>.03||weather.rain;if(running)updateAgents(dt,now,world);else agents.forEach(projectLabel);updateWorldItems(dt,now);updateRain(dt);updateSeasonLeaves(dt);if(Math.floor(now/2000)!==Math.floor((now-dt*1000)/2000))pollDonationEvents();updateCamera(dt);$('#clock').textContent=realDate.toLocaleTimeString('ru-RU',{hour12:false});$('#worldStatus').textContent=world.season.emoji+' '+world.season.name+' · Наблюдение за миром';$('#statusDetail').textContent=world.night>.55?`${world.season.emoji} Сейчас ночь · ${world.season.temperatureC.toFixed(1)}°C · сезонная темнота синхронизирована с Нюрнбергом.`:`${world.season.emoji} ${world.season.name} · ${world.season.temperatureC.toFixed(1)}°C · солнечный день синхронизирован с Нюрнбергом.`;updateExperimentDay();if(now-lastDecision>9000&&running){lastDecision=now;renderStats()}saveTimer+=dt;if(saveTimer>8){saveTimer=0;save()}renderer.render(scene,camera)}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75))}
 addEvent('OpenAI и Cloude появились в мире независимо друг от друга.');addEvent('Среда создана. Цели агентам не назначены.');addEvent('Реальное солнечное время синхронизировано с Нюрнбергом.');addEvent('Наблюдение активно. Вмешательство человека: 0.');addEvent('AI Life 2.0 — визуальное ядро запущено.');
-renderEvents();renderStats();updatePill();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,autumnProgress,autumnClimate,applySeason,seasonPalettes,trees,leafBed,bridge,caves,weather};
+renderEvents();renderStats();updateExperimentDay();window.addEventListener('resize',resize);resize();if(['127.0.0.1','localhost'].includes(location.hostname))window.__AI_LIFE_TEST__={agents,isWalkable,chooseSafeSpawn,save,showSpeech,speakAgent,receiveDialogue,spawnWorldItem,applyDonationEvent,setRain,seasonInfo,autumnProgress,autumnClimate,applySeason,seasonPalettes,trees,leafBed,bridge,caves,weather};
 requestAnimationFrame(tick);
