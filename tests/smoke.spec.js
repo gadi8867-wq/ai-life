@@ -139,19 +139,19 @@ test('autumn calendar changes smoothly week to week', async ({ page }) => {
 });
 
 
-test('season and compact pause control are synchronized to Nuremberg', async ({ page }) => {
+test('season calendar and online mode are synchronized to Nuremberg', async ({ page }) => {
   await page.goto('/');
-  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.seasonInfo && document.querySelector('#start'));
+  await page.waitForFunction(() => window.__AI_LIFE_TEST__?.seasonInfo);
   const result = await page.evaluate(() => ({
     season: window.__AI_LIFE_TEST__.seasonInfo(new Date(Date.UTC(2026, 8, 18))).key,
-    button: document.querySelector('#start')?.textContent?.trim(),
-    pillHasButton: Boolean(document.querySelector('.experiment-pill #start')),
-    buttonPosition: getComputedStyle(document.querySelector('#start')).position
+    startButton: Boolean(document.querySelector('#start')),
+    startCss: document.querySelector('.start-button') !== null,
+    experimentDay: document.querySelector('#pillDay')?.textContent || ''
   }));
   expect(result.season).toBe('autumn');
-  expect(result.button).toMatch(/(?:СТАРТ|ⅡПАУЗА)/);
-  expect(result.pillHasButton).toBeTruthy();
-  expect(result.buttonPosition).toBe('relative');
+  expect(result.startButton).toBeFalsy();
+  expect(result.startCss).toBeFalsy();
+  expect(result.experimentDay).toMatch(/ДЕНЬ\\s+\\d{3}/);
 });
 
 
